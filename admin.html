@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DukaPulse Admin - Empire View</title>
+<title>Duka Tracker - Empire Admin</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--primary:#0f172a;--accent:#10b981;--bg:#f8fafc;--orange:#f59e0b;--danger:#ef4444}
@@ -23,7 +23,7 @@ body{background:var(--bg);padding-bottom:20px}
 </style>
 </head>
 <body>
-<div class="header"><div class="logo">Duka<span>Pulse</span> EMPIRE ADMIN</div><div style="font-size:12px">👑 All Dukaz Live | <span id="conn">LOADING...</span></div></div>
+<div class="header"><div class="logo">Duka<span>Tracker</span> EMPIRE ADMIN</div><div style="font-size:12px">👑 All Dukaz Live | <span id="conn">LOADING...</span></div></div>
 
 <div class="card"><h3>🔒 Admin Login</h3><div style="display:flex;gap:8px;margin-top:10px"><input id="adminPass" type="password" class="input" placeholder="admin123"><button class="btn btn-accent" onclick="loginAdmin()">Unlock Empire</button></div></div>
 
@@ -75,7 +75,7 @@ let allTenants=[], allProducts=[], allSales=[], allExpenses=[], allMkopo=[];
 
 function loginAdmin(){ if(document.getElementById('adminPass').value!=='admin123') return alert('Wrong password'); document.getElementById('dashboard').style.display='block'; loadData(); }
 
-function getShopLink(id){ return `https://dukapulse-empire.vercel.app/?tenant=${id}`; }
+function getShopLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
 
 function generateId(){
  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-') || 'duka';
@@ -94,7 +94,7 @@ async function createTenant(){
  if(error) return alert('Error: '+error.message);
  let link=getShopLink(id);
  document.getElementById('newLinkResult').style.display='block';
- document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>Shop:</b> ${shop}<br><b>ID:</b> ${id}<br><b>Link:</b><br><a href="${link}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">${link}</a><br><br><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${link}');alert('Link copied!')">📋 Copy Link</button> <button class="btn" style="background:#25D366" onclick="window.open('https://wa.me/?text='+encodeURIComponent('Karibu DukaPulse! Your shop link: ${link}'),' _blank')">WhatsApp Share</button>`;
+ document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>Shop:</b> ${shop}<br><b>ID:</b> ${id}<br><b>Link:</b><br><a href="${link}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">${link}</a><br><br><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${link}');alert('Link copied!')">📋 Copy Link</button> <button class="btn" style="background:#25D366" onclick="window.open('https://wa.me/?text='+encodeURIComponent('Karibu Duka Tracker! Your shop link: ${link}'),' _blank')">WhatsApp Share</button>`;
  document.getElementById('newShopName').value=''; document.getElementById('newCounty').value=''; document.getElementById('newPhone').value=''; document.getElementById('newTenantId').value='';
  loadData();
 }
