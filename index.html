@@ -173,9 +173,27 @@ let TENANT=params.get('tenant')||localStorage.getItem('duka_tenant')||'mwea-001'
 localStorage.setItem('duka_tenant',TENANT);
 document.getElementById('tenantIdShow').innerText=TENANT;
 
-// IMMEDIATE OFFLINE BLOCK CHECK: If previously blocked locally, lock down instantly
-if(localStorage.getItem('duka_blocked_'+TENANT) === 'true') {
-  document.body.innerHTML='<div style="padding:40px 20px;text-align:center;font-family:system-ui"><h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">⛔ Shop Blocked</h2><p style="color:#475569;font-size:14px">Contact Admin. Your subscription expired.</p><p style="color:#475569;font-size:14px;margin-top:4px">Pay Ksh 300 to reactivate.</p></div>';
+// IMMEDIATE OFFLINE CHECKS
+const nowTs = Date.now();
+const lastCheckTs = localStorage.getItem('duka_last_check_' + TENANT);
+const GRACE_PERIOD = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+// Check 1: If previously blocked from cloud, lock immediately
+if(localStorage.getItem('duka_blocked_' + TENANT) === 'true') {
+  renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
+} 
+// Check 2: If offline for more than 7 days without cloud check-in, trigger expiration lock
+else if (!navigator.onLine && lastCheckTs && (nowTs - parseInt(lastCheckTs) > GRACE_PERIOD)) {
+  renderBlockedScreen("⚠️ Connection Required", "Your 7-day offline grace period has expired.", "Please connect to the internet to verify subscription.");
+}
+
+function renderBlockedScreen(title, line1, line2) {
+  document.body.innerHTML = `
+    <div style="padding:40px 20px;text-align:center;font-family:system-ui">
+      <h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">${title}</h2>
+      <p style="color:#475569;font-size:14px">${line1}</p>
+      <p style="color:#475569;font-size:14px;margin-top:4px">${line2}</p>
+    </div>`;
 }
 
 let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
@@ -466,27 +484,30 @@ async function trySync(){
 
 async function loadShop(){
  document.getElementById('shopName').innerText='Loading...';
- let {data}=await client.from('tenants').select('*').eq('id',TENANT).single();
- if(data){
-   if(data.is_active===false){ 
-     // Save blocked status locally so it stays locked even if offline next time
-     localStorage.setItem('duka_blocked_'+TENANT, 'true');
-     document.body.innerHTML='<div style="padding:40px 20px;text-align:center;font-family:system-ui"><h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">⛔ Shop Blocked</h2><p style="color:#475569;font-size:14px">Contact Admin. Your subscription expired.</p><p style="color:#475569;font-size:14px;margin-top:4px">Pay Ksh 300 to reactivate.</p></div>'; 
-     return; 
+ if (navigator.onLine) {
+   let {data}=await client.from('tenants').select('*').eq('id',TENANT).single();
+   if(data){
+     if(data.is_active===false){ 
+       localStorage.setItem('duka_blocked_'+TENANT, 'true');
+       renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
+       return; 
+     } else {
+       // Online Check Passed: Refresh 7-day Grace Period timer & clear local block
+       localStorage.setItem('duka_blocked_'+TENANT, 'false');
+       localStorage.setItem('duka_last_check_'+TENANT, Date.now().toString());
+     }
+     document.getElementById('shopName').innerText=data.shop_name+' • '+data.county;
    } else {
-     // Clear block status if active is true
-     localStorage.setItem('duka_blocked_'+TENANT, 'false');
+     document.getElementById('shopName').innerText=TENANT;
    }
-   document.getElementById('shopName').innerText=data.shop_name+' • '+data.county;
- } else {
-   document.getElementById('shopName').innerText=TENANT;
- }
- let {data:salesCloud}=await client.from('sales').select('*').eq('tenant_id',TENANT).order('created_at',{ascending:false}).limit(200);
- if(salesCloud && salesCloud.length){
-   let ids=new Set(sales.map(s=>s.id));
-   salesCloud.forEach(cs=>{ if(!ids.has(cs.id)) sales.push(cs); });
-   sales.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
-   saveLocal(); renderAll();
+   
+   let {data:salesCloud}=await client.from('sales').select('*').eq('tenant_id',TENANT).order('created_at',{ascending:false}).limit(200);
+   if(salesCloud && salesCloud.length){
+     let ids=new Set(sales.map(s=>s.id));
+     salesCloud.forEach(cs=>{ if(!ids.has(cs.id)) sales.push(cs); });
+     sales.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+     saveLocal(); renderAll();
+   }
  }
 }
 
@@ -522,7 +543,7 @@ function renderAll(){
 
  document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${sanitize(p.name)} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
  document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${sanitize(s.customer||'')}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
- document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge ${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
+ document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
  
  document.getElementById('stockList').innerHTML=products.length?products.map(p=>{
    let isLowStock = p.stock <= 5 && p.stock > 0;
