@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DukaPulse - Multitenant POS</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Html5-Qrcode Library for Camera Barcode & QR Scanning -->
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <style>
 :root {
@@ -17,163 +16,300 @@
   --card-bg: #ffffff;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-body { background: var(--bg); padding-bottom: 40px; color: #1e293b; }
-.header { background: var(--primary); color: white; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; }
-.logo { font-weight: 900; font-size: 20px; } 
+body { background: var(--bg); padding-bottom: 90px; color: #1e293b; }
+
+/* Top Header */
+.header { background: var(--primary); color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+.logo { font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 8px; } 
 .logo span { color: var(--accent); }
-.card { background: var(--card-bg); border-radius: 16px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); margin: 12px; }
-.btn { background: var(--primary); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 14px; transition: opacity 0.2s; }
-.btn:hover { opacity: 0.9; }
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* Cards & Layout */
+.card { background: var(--card-bg); border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin: 12px; }
+.btn { background: var(--primary); color: white; border: none; padding: 10px 14px; border-radius: 10px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; }
 .btn-accent { background: var(--accent); }
 .btn-danger { background: var(--danger); }
-.btn-secondary { background: #64748b; }
-.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; width: auto; }
+.btn-secondary { background: #64748b; color: white; }
+.btn-sm { padding: 6px 10px; font-size: 11px; border-radius: 8px; }
 .btn-full { width: 100%; }
+
 .input { width: 100%; padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; }
 .input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
-.badge { font-size: 11px; padding: 4px 8px; border-radius: 20px; font-weight: 800; background: #e2e8f0; color: #475569; }
-.badge-warning { background: #fef3c7; color: #b45309; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-.tenant-bar { background: var(--accent); color: white; padding: 8px 16px; font-size: 12px; text-align: center; font-weight: 700; }
-.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.metric-card { background: #f1f5f9; padding: 12px; border-radius: 12px; text-align: center; }
-.metric-val { font-size: 18px; font-weight: 900; color: var(--primary); }
-.metric-label { font-size: 11px; color: #64748b; text-transform: uppercase; }
 
-/* Scanner Container */
+.badge { font-size: 10px; padding: 4px 8px; border-radius: 20px; font-weight: 800; background: #e2e8f0; color: #475569; }
+.badge-warning { background: #fef3c7; color: #b45309; }
+
+/* Warning Banner */
+.warning-banner { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; padding: 12px 16px; margin: 12px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; }
+
+/* Dashboard Grids */
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.metric-card { background: #f8fafc; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #e2e8f0; }
+.metric-val { font-size: 14px; font-weight: 800; color: var(--primary); }
+.metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+
+/* Bottom Navbar */
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 8px 0; border-top: 1px solid #e2e8f0; z-index: 999; }
+.nav-item { text-align: center; font-size: 10px; font-weight: 700; color: #64748b; cursor: pointer; flex: 1; }
+.nav-item.active { color: var(--accent); }
+.nav-item div { font-size: 18px; margin-bottom: 2px; }
+
+/* Scanner view */
 #interactive-scanner { width: 100%; border-radius: 12px; overflow: hidden; background: #000; margin-top: 10px; display: none; }
 #reader { width: 100%; }
 
-/* Navigation Tabs */
-.tabs { display: flex; background: white; margin: 12px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
-.tab { flex: 1; padding: 12px; text-align: center; font-weight: 700; font-size: 13px; cursor: pointer; background: #f8fafc; color: #64748b; }
-.tab.active { background: var(--primary); color: white; }
-
-/* Modal Styling */
+/* Modal Overlay */
 .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px; }
 .modal-content { background: white; border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
 </style>
 </head>
 <body>
 
+<!-- Header -->
 <div class="header">
-  <div class="logo">Duka<span>Pulse</span></div>
-  <div style="font-size:11px">
-    <span id="onlineDot">●</span> <span id="statusTxt">ONLINE</span> | <span id="queueTxt">0 pending</span>
+  <div class="logo">
+    <span style="background:var(--accent); color:white; padding:4px 8px; border-radius:8px;">🛒</span>
+    <span id="headerShopName">DukaPulse</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-sm btn-accent" onclick="openScannerModal()">📷 Scan</button>
+    <div style="font-size:10px"><span id="onlineDot" style="color:#10b981">●</span> <span id="statusTxt">ONLINE</span></div>
   </div>
 </div>
 
-<div class="tenant-bar" id="tenantBar">TENANT: - </div>
+<div class="tenant-bar" id="tenantBar" style="background:var(--primary); color:#10b981; font-size:11px; text-align:center; padding:6px; font-weight:700;">TENANT: -</div>
 
-<!-- LOGIN / TENANT ONBOARDING -->
+<!-- LOGIN VIEW -->
 <div id="loginView" class="card" style="margin-top:30px">
-  <h3>Enter Your Duka - Multitenant POS</h3>
-  <p style="color:#64748b;font-size:13px;margin:8px 0">Isolated store database powered by Supabase & Offline Sync.</p>
-  <input id="shopName" class="input" placeholder="e.g Mwea General Stores" style="margin:10px 0">
-  <input id="county" class="input" placeholder="County e.g Embu" style="margin:10px 0">
-  <input id="phone" class="input" placeholder="Phone e.g 0712345678">
-  <button class="btn btn-accent btn-full" style="margin-top:14px" onclick="login()">Open My Register →</button>
-  <p style="font-size:11px;color:#94a3b8;margin-top:10px">Your tenant_id: <span id="previewId">auto</span></p>
+  <h3>Open Your Duka Register</h3>
+  <p style="color:#64748b;font-size:13px;margin:8px 0">Isolated multi-tenant store setup with Supabase cloud sync.</p>
+  <input id="shopName" class="input" placeholder="Shop Name e.g Mwea General Stores" style="margin:10px 0">
+  <input id="county" class="input" placeholder="County e.g Kirinyaga" style="margin:10px 0">
+  <input id="phone" class="input" placeholder="Owner Phone e.g 0712345678">
+  <button class="btn btn-accent btn-full" style="margin-top:14px" onclick="login()">Launch Register →</button>
 </div>
 
-<!-- MAIN APP VIEW -->
+<!-- MAIN APP VIEWS -->
 <div id="appView" style="display:none">
-  
-  <!-- Navigation Tabs -->
-  <div class="tabs">
-    <div class="tab active" id="tabPos" onclick="switchTab('pos')">🛒 POS & Inventory</div>
-    <div class="tab" id="tabSales" onclick="switchTab('sales')">📊 Sales & Reports</div>
+
+  <!-- LOW STOCK WARNING BANNER -->
+  <div id="lowStockBanner" class="warning-banner" style="display:none;">
+    <span>⚠️ Warning: <span id="lowStockCount">0</span> product(s) low in stock!</span>
+    <button class="btn btn-sm" style="background:#fff; color:#92400e;" onclick="switchTab('inventory')">RESTOCK</button>
   </div>
 
-  <!-- TAB 1: POS & INVENTORY -->
-  <div id="viewPos">
+  <!-- TAB 1: DASHBOARD -->
+  <div id="tabDashboard" class="tab-content">
     
-    <!-- Barcode Scanner Quick Sale Panel -->
-    <div class="card" style="border: 2px dashed var(--accent);">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h4>🔍 Scan & Sell Barcode</h4>
-        <button class="btn btn-sm btn-accent" onclick="toggleCameraScanner()">📷 Camera Scan</button>
+    <!-- Quick Action / Sell Card -->
+    <div class="card" style="display:flex; justify-content:space-between; align-items:center; background:linear-gradient(135deg, #0f172a, #1e293b); color:white;">
+      <div>
+        <h4 style="color:white">Quick Sell Register</h4>
+        <p style="font-size:11px; color:#94a3b8">Scan items or pick from inventory</p>
       </div>
+      <button class="btn btn-accent" onclick="openSellModal()">+ New Sale</button>
+    </div>
+
+    <!-- Sales Today Card -->
+    <div class="card" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
+      <div style="font-size: 12px; color: #166534; font-weight: 700; display:flex; align-items:center; gap:4px;">
+        <span>📈 Sales Today</span>
+      </div>
+      <div style="font-size: 28px; font-weight: 900; color: #14532d; margin: 6px 0;" id="dashTotalSales">Ksh 0</div>
       
-      <!-- Video Scanner Element -->
-      <div id="interactive-scanner">
-        <div id="reader"></div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="dashNetProfit">Ksh 0</div>
+          <div class="metric-label">Net Profit</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashOrdersCount">0</div>
+          <div class="metric-label">Orders</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="dashAvgOrder">Ksh 0</div>
+          <div class="metric-label">Avg Order</div>
+        </div>
       </div>
-
-      <div style="margin-top:10px;">
-        <input id="quickBarcode" class="input" placeholder="Scan barcode with handheld scanner or enter code..." onkeypress="handleQuickScan(event)">
-      </div>
-      <p style="font-size:11px; color:#64748b; margin-top:6px">Press [Enter] after scanning to instantly complete sale.</p>
     </div>
 
-    <!-- Add Product Panel -->
+    <!-- Payment Breakdown -->
     <div class="card">
-      <div style="display:flex;justify-content:space-between; align-items:center">
-        <h4>📦 Add / Update Inventory</h4>
-        <span class="badge" id="shopBadge"></span>
+      <h4 style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Payment Breakdown (Today)</h4>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-val" id="payMpesa">Ksh 0</div>
+          <div class="metric-label">M-Pesa</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="payCash">Ksh 0</div>
+          <div class="metric-label">Cash</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-val" id="payDebt" style="color:var(--danger)">Ksh 0</div>
+          <div class="metric-label">Debt (Mkopo)</div>
+        </div>
       </div>
-      <div style="margin-top:12px"><input id="prodName" class="input" placeholder="Product name"></div>
-      <div class="grid3" style="margin-top:10px">
-        <input id="prodPrice" type="number" class="input" placeholder="Price (Ksh)">
-        <input id="prodStock" type="number" class="input" placeholder="Stock Qty">
-        <input id="prodBarcode" class="input" placeholder="Barcode (Optional)">
-      </div>
-      <button class="btn btn-accent btn-full" style="margin-top:12px" onclick="addProduct()">+ Save Stock Item</button>
     </div>
 
-    <!-- Inventory Listing -->
+    <!-- Shop Expenses (Matumizi) -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h4 style="font-size: 14px;">🛍️ Shop Expenses (Matumizi)</h4>
+        <button class="btn btn-sm btn-secondary" onclick="openExpenseModal()">+ Add Expense</button>
+      </div>
+      <div style="margin-top: 10px; font-size: 13px; display:flex; justify-content:space-between; color:#475569;">
+        <span>Today's Matumizi Total:</span>
+        <b id="expenseTotal">Ksh 0</b>
+      </div>
+    </div>
+
+    <!-- Active Mkopo (Debts) -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h4 style="font-size: 14px;">📋 Active Mkopo (Debts)</h4>
+        <span class="badge badge-warning" id="debtTotalBadge">Total: Ksh 0</span>
+      </div>
+      <div id="debtList" style="margin-top: 10px; font-size: 12px; color: #64748b;">No active customer debts.</div>
+    </div>
+
+  </div>
+
+  <!-- TAB 2: SALES HISTORY -->
+  <div id="tabSales" class="tab-content" style="display:none">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h4>Sales History & Records</h4>
+        <button class="btn btn-sm" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <div id="salesHistoryList" style="margin-top:12px; font-size:13px">No sales yet</div>
+      <button class="btn btn-full btn-secondary" style="margin-top:14px" onclick="syncNow()">🔄 Force Database Sync</button>
+    </div>
+  </div>
+
+  <!-- TAB 3: INVENTORY -->
+  <div id="tabInventory" class="tab-content" style="display:none">
+    <div class="card">
+      <h4>📦 Add Stock Item</h4>
+      <div style="margin-top:10px"><input id="prodName" class="input" placeholder="Product Name"></div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px">
+        <input id="prodBuyPrice" type="number" class="input" placeholder="Buying Price (Ksh)">
+        <input id="prodPrice" type="number" class="input" placeholder="Selling Price (Ksh)">
+      </div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:8px">
+        <input id="prodStock" type="number" class="input" placeholder="Stock Qty">
+        <input id="prodBarcode" class="input" placeholder="Barcode Code">
+      </div>
+      <button class="btn btn-accent btn-full" style="margin-top:12px" onclick="addProduct()">+ Save to Inventory</button>
+    </div>
+
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-        <h4>My Stock (<span id="stockCount">0</span>)</h4>
-        <input id="searchStock" class="input" style="width:50%; padding:6px 10px;" placeholder="Search stock..." oninput="renderProducts()">
+        <h4>Store Inventory (<span id="stockCount">0</span>)</h4>
+        <input id="searchStock" class="input" style="width:45%; padding:6px;" placeholder="Search stock..." oninput="renderInventory()">
       </div>
-      <div id="stockList"></div>
+      <div id="inventoryList"></div>
     </div>
   </div>
 
-  <!-- TAB 2: SALES & REPORTS -->
-  <div id="viewSales" style="display:none">
+  <!-- TAB 4: PROFILE -->
+  <div id="tabProfile" class="tab-content" style="display:none">
     <div class="card">
-      <h4>Performance Overview</h4>
-      <div class="metrics-grid" style="margin-top:10px">
-        <div class="metric-card">
-          <div class="metric-val" id="todayTotal">Ksh 0</div>
-          <div class="metric-label">Today's Revenue</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-val" id="todayItemsCount">0</div>
-          <div class="metric-label">Items Sold</div>
-        </div>
+      <h4>Tenant Shop Profile</h4>
+      <div style="margin-top: 12px; font-size: 13px; line-height: 1.6;">
+        <p><b>Shop Name:</b> <span id="profShop">-</span></p>
+        <p><b>County:</b> <span id="profCounty">-</span></p>
+        <p><b>Phone:</b> <span id="profPhone">-</span></p>
+        <p><b>Tenant ID:</b> <span id="profId">-</span></p>
       </div>
+      <button class="btn btn-danger btn-full" style="margin-top:16px" onclick="logout()">Logout / Switch Shop</button>
     </div>
 
-    <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h4>Sales History</h4>
-        <button class="btn btn-sm" onclick="exportSalesCSV()">📥 Export CSV</button>
-      </div>
-      <div id="salesList" style="margin-top:10px; font-size:13px">No sales record</div>
-      <button class="btn btn-full" style="margin-top:12px" onclick="syncNow()">🔄 Force Sync Database</button>
-    </div>
-
-    <div class="card" style="background:#0f172a;color:#10b981">
-      <h4 style="color:white">Super Admin - Multi-tenant Cloud View</h4>
-      <pre style="font-size:11px;white-space:pre-wrap;margin-top:10px" id="adminView">Connecting to Supabase cloud database...</pre>
+    <div class="card" style="background:#0f172a; color:#10b981">
+      <h4 style="color:white">Cloud Database Sync</h4>
+      <pre style="font-size:11px; white-space:pre-wrap; margin-top:10px" id="adminView">Connecting...</pre>
     </div>
   </div>
 
 </div>
 
-<!-- RECEIPT MODAL -->
-<div class="modal-overlay" id="receiptModal">
+<!-- BOTTOM NAVIGATION BAR -->
+<div class="bottom-nav" id="bottomNav" style="display:none">
+  <div class="nav-item active" onclick="switchTab('dashboard')" id="navDashboard">
+    <div>🏠</div>Dashboard
+  </div>
+  <div class="nav-item" onclick="switchTab('sales')" id="navSales">
+    <div>🧾</div>Sales
+  </div>
+  <div class="nav-item" onclick="switchTab('inventory')" id="navInventory">
+    <div>📦</div>Inventory
+  </div>
+  <div class="nav-item" onclick="switchTab('profile')" id="navProfile">
+    <div>👤</div>Profile
+  </div>
+</div>
+
+<!-- MODAL: QUICK SELL / NEW SALE -->
+<div class="modal-overlay" id="sellModal">
   <div class="modal-content">
-    <div id="receiptContent" style="font-family: monospace; font-size: 13px;">
-      <!-- Dynamic Receipt Content -->
+    <h3>New Sale Register</h3>
+    <div style="margin-top:12px;">
+      <label style="font-size:12px; font-weight:700;">Select Product:</label>
+      <select id="saleProdSelect" class="input" style="margin-top:4px;" onchange="updateSellPrice()"></select>
     </div>
-    <div style="margin-top: 16px; display: flex; gap: 8px;">
-      <button class="btn btn-accent btn-full" onclick="window.print()">🖨️ Print</button>
-      <button class="btn btn-secondary btn-full" onclick="closeReceipt()">Close</button>
+    <div style="margin-top:10px;">
+      <label style="font-size:12px; font-weight:700;">Quantity:</label>
+      <input id="saleQty" type="number" class="input" value="1" style="margin-top:4px;" min="1" oninput="calcSaleTotal()">
+    </div>
+    <div style="margin-top:10px;">
+      <label style="font-size:12px; font-weight:700;">Total Amount (Ksh):</label>
+      <input id="saleTotal" type="number" class="input" style="margin-top:4px;" readonly>
+    </div>
+    <div style="margin-top:10px;">
+      <label style="font-size:12px; font-weight:700;">Payment Mode:</label>
+      <select id="salePaymentMode" class="input" style="margin-top:4px;">
+        <option value="Cash">Cash</option>
+        <option value="M-Pesa">M-Pesa</option>
+        <option value="Debt">Debt (Mkopo)</option>
+      </select>
+    </div>
+    <div id="customerNameDiv" style="margin-top:10px;">
+      <label style="font-size:12px; font-weight:700;">Customer Name (for Mkopo/Debt):</label>
+      <input id="saleCustomer" class="input" placeholder="e.g John Kamau" style="margin-top:4px;">
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="btn btn-accent btn-full" onclick="completeSale()">Complete Sale</button>
+      <button class="btn btn-secondary btn-full" onclick="closeSellModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXPENSE (MATUMIZI) -->
+<div class="modal-overlay" id="expenseModal">
+  <div class="modal-content">
+    <h3>Add Shop Expense (Matumizi)</h3>
+    <div style="margin-top:12px;">
+      <input id="expDesc" class="input" placeholder="Description e.g Electricity / Lunch">
+    </div>
+    <div style="margin-top:10px;">
+      <input id="expAmount" type="number" class="input" placeholder="Amount (Ksh)">
+    </div>
+    <div style="margin-top:16px; display:flex; gap:8px;">
+      <button class="btn btn-accent btn-full" onclick="saveExpense()">Save Expense</button>
+      <button class="btn btn-secondary btn-full" onclick="closeExpenseModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CAMERA BARCODE SCANNER -->
+<div class="modal-overlay" id="scannerModal">
+  <div class="modal-content">
+    <h3>Scan Barcode</h3>
+    <div id="interactive-scanner" style="display:block;">
+      <div id="reader"></div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-secondary btn-full" onclick="closeScannerModal()">Close Scanner</button>
     </div>
   </div>
 </div>
@@ -188,26 +324,21 @@ let tenantData = JSON.parse(localStorage.getItem('dp_tenant_data') || 'null');
 let localDB = {
   products: JSON.parse(localStorage.getItem('dp_products') || '[]'),
   sales: JSON.parse(localStorage.getItem('dp_sales') || '[]'),
+  expenses: JSON.parse(localStorage.getItem('dp_expenses') || '[]'),
+  debts: JSON.parse(localStorage.getItem('dp_debts') || '[]'),
   queue: JSON.parse(localStorage.getItem('dp_queue') || '[]')
 };
 
 let html5QrcodeScanner = null;
 
-function preview() {
-  let name = document.getElementById('shopName').value || 'mwea';
-  let id = name.toLowerCase().replace(/\s+/g, '-').substring(0, 12) + '-' + Math.floor(Math.random() * 999);
-  document.getElementById('previewId').innerText = id;
-  return id;
-}
-document.getElementById('shopName')?.addEventListener('input', preview);
-
 function login() {
-  let shop = document.getElementById('shopName').value.trim() || 'Mwea Duka';
+  let shop = document.getElementById('shopName').value.trim() || 'Mwea Shop';
   let countyVal = document.getElementById('county').value.trim() || 'Kirinyaga';
   let phoneVal = document.getElementById('phone').value.trim() || '0712345678';
-  if(!tenantId) tenantId = preview();
   
+  tenantId = shop.toLowerCase().replace(/\s+/g, '-') + '-' + Math.floor(Math.random()*999);
   tenantData = { shop_name: shop, county: countyVal, phone: phoneVal, tenant_id: tenantId };
+  
   localStorage.setItem('dp_tenant_id', tenantId);
   localStorage.setItem('dp_tenant_data', JSON.stringify(tenantData));
   
@@ -219,254 +350,316 @@ function showApp() {
   if(!tenantData) return;
   document.getElementById('loginView').style.display = 'none';
   document.getElementById('appView').style.display = 'block';
-  document.getElementById('tenantBar').innerText = `TENANT: ${tenantId} | ${tenantData.county} | ${tenantData.shop_name}`;
-  document.getElementById('shopBadge').innerText = tenantData.shop_name;
-  renderProducts();
-  renderSales();
-  renderAdmin();
+  document.getElementById('bottomNav').style.display = 'flex';
+  document.getElementById('headerShopName').innerText = tenantData.shop_name;
+  document.getElementById('tenantBar').innerText = `TENANT: ${tenantId} | ${tenantData.county}`;
+  
+  // Profile
+  document.getElementById('profShop').innerText = tenantData.shop_name;
+  document.getElementById('profCounty').innerText = tenantData.county;
+  document.getElementById('profPhone').innerText = tenantData.phone;
+  document.getElementById('profId').innerText = tenantId;
+
+  refreshAll();
 }
 
-function switchTab(tab) {
-  document.getElementById('viewPos').style.display = tab === 'pos' ? 'block' : 'none';
-  document.getElementById('viewSales').style.display = tab === 'sales' ? 'block' : 'none';
-  document.getElementById('tabPos').classList.toggle('active', tab === 'pos');
-  document.getElementById('tabSales').classList.toggle('active', tab === 'sales');
-  if(tab !== 'pos' && html5QrcodeScanner) {
-    stopCameraScanner();
-  }
+function logout() {
+  localStorage.clear();
+  location.reload();
+}
+
+function switchTab(tabName) {
+  ['dashboard', 'sales', 'inventory', 'profile'].forEach(t => {
+    document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).style.display = (t === tabName) ? 'block' : 'none';
+    let nav = document.getElementById('nav' + t.charAt(0).toUpperCase() + t.slice(1));
+    if(nav) nav.classList.toggle('active', t === tabName);
+  });
+  if(tabName === 'inventory') renderInventory();
+  if(tabName === 'dashboard') refreshDashboard();
 }
 
 function saveLocal() {
   localStorage.setItem('dp_products', JSON.stringify(localDB.products));
   localStorage.setItem('dp_sales', JSON.stringify(localDB.sales));
+  localStorage.setItem('dp_expenses', JSON.stringify(localDB.expenses));
+  localStorage.setItem('dp_debts', JSON.stringify(localDB.debts));
   localStorage.setItem('dp_queue', JSON.stringify(localDB.queue));
 }
 
-function addProduct() {
-  let name = document.getElementById('prodName').value.trim();
-  let price = parseInt(document.getElementById('prodPrice').value) || 0;
-  let stock = parseInt(document.getElementById('prodStock').value) || 0;
-  let barcode = document.getElementById('prodBarcode').value.trim() || ('200' + Date.now().toString().slice(-10));
-  
-  if(!name) return alert('Please enter product name');
-  
-  // Check if barcode exists to update stock or add new product
-  let existingIndex = localDB.products.findIndex(p => p.tenant_id === tenantId && (p.barcode === barcode || p.name.toLowerCase() === name.toLowerCase()));
+function refreshAll() {
+  renderInventory();
+  renderSalesHistory();
+  refreshDashboard();
+}
 
-  if(existingIndex > -1) {
-    localDB.products[existingIndex].stock += stock;
-    localDB.products[existingIndex].price = price || localDB.products[existingIndex].price;
-    localDB.queue.push({ type: 'product', data: localDB.products[existingIndex] });
+function refreshDashboard() {
+  let mySales = localDB.sales.filter(s => s.tenant_id == tenantId);
+  let myExpenses = localDB.expenses.filter(e => e.tenant_id == tenantId);
+  let myDebts = localDB.debts.filter(d => d.tenant_id == tenantId && !d.paid);
+  let myProds = localDB.products.filter(p => p.tenant_id == tenantId);
+
+  // Today's Date String for filtering today's data
+  let todayStr = new Date().toDateString();
+  let todaySales = mySales.filter(s => new Date(s.created_at).toDateString() === todayStr);
+
+  let totalRev = todaySales.reduce((acc, s) => acc + (s.total || 0), 0);
+  let totalProfit = todaySales.reduce((acc, s) => acc + (s.profit || 0), 0);
+  let ordersCount = todaySales.length;
+  let avgOrder = ordersCount ? Math.round(totalRev / ordersCount) : 0;
+
+  document.getElementById('dashTotalSales').innerText = `Ksh ${totalRev.toLocaleString()}`;
+  document.getElementById('dashNetProfit').innerText = `Ksh ${totalProfit.toLocaleString()}`;
+  document.getElementById('dashOrdersCount').innerText = ordersCount;
+  document.getElementById('dashAvgOrder').innerText = `Ksh ${avgOrder.toLocaleString()}`;
+
+  // Payment Breakdown
+  let mpesa = todaySales.filter(s => s.payment_mode === 'M-Pesa').reduce((acc, s) => acc + s.total, 0);
+  let cash = todaySales.filter(s => s.payment_mode === 'Cash').reduce((acc, s) => acc + s.total, 0);
+  let debt = todaySales.filter(s => s.payment_mode === 'Debt').reduce((acc, s) => acc + s.total, 0);
+
+  document.getElementById('payMpesa').innerText = `Ksh ${mpesa.toLocaleString()}`;
+  document.getElementById('payCash').innerText = `Ksh ${cash.toLocaleString()}`;
+  document.getElementById('payDebt').innerText = `Ksh ${debt.toLocaleString()}`;
+
+  // Expenses
+  let todayExpenses = myExpenses.filter(e => new Date(e.created_at).toDateString() === todayStr);
+  let expTotal = todayExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+  document.getElementById('expenseTotal').innerText = `Ksh ${expTotal.toLocaleString()}`;
+
+  // Low stock check
+  let lowStockProds = myProds.filter(p => p.stock <= 3);
+  if(lowStockProds.length > 0) {
+    document.getElementById('lowStockBanner').style.display = 'flex';
+    document.getElementById('lowStockCount').innerText = lowStockProds.length;
   } else {
-    let prod = { id: Date.now(), tenant_id: tenantId, name, price, stock, barcode };
-    localDB.products.unshift(prod);
-    localDB.queue.push({ type: 'product', data: prod });
+    document.getElementById('lowStockBanner').style.display = 'none';
+  }
+
+  // Active Debts
+  let totalDebtAmount = myDebts.reduce((acc, d) => acc + (d.amount || 0), 0);
+  document.getElementById('debtTotalBadge').innerText = `Total: Ksh ${totalDebtAmount.toLocaleString()}`;
+  document.getElementById('debtList').innerHTML = myDebts.length ? myDebts.map(d => `
+    <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+      <span><b>${d.customer}</b> (${d.desc})</span>
+      <span style="color:var(--danger)">Ksh ${d.amount} <button class="btn btn-sm btn-accent" style="padding:2px 6px;" onclick="settleDebt(${d.id})">Clear</button></span>
+    </div>
+  `).join('') : 'No active customer debts.';
+}
+
+/* SELL MODAL */
+function openSellModal() {
+  let myProds = localDB.products.filter(p => p.tenant_id == tenantId);
+  let select = document.getElementById('saleProdSelect');
+  select.innerHTML = myProds.map(p => `<option value="${p.id}" data-price="${p.price}" data-buy="${p.buy_price || 0}">${p.name} (Stock: ${p.stock})</option>`).join('');
+  updateSellPrice();
+  document.getElementById('sellModal').style.display = 'flex';
+}
+function closeSellModal() { document.getElementById('sellModal').style.display = 'none'; }
+function updateSellPrice() {
+  let select = document.getElementById('saleProdSelect');
+  let opt = select.options[select.selectedIndex];
+  if(opt) {
+    let price = opt.getAttribute('data-price') || 0;
+    document.getElementById('saleQty').value = 1;
+    document.getElementById('saleTotal').value = price;
+  }
+}
+function calcSaleTotal() {
+  let select = document.getElementById('saleProdSelect');
+  let opt = select.options[select.selectedIndex];
+  if(opt) {
+    let price = parseFloat(opt.getAttribute('data-price') || 0);
+    let qty = parseInt(document.getElementById('saleQty').value) || 1;
+    document.getElementById('saleTotal').value = price * qty;
+  }
+}
+function completeSale() {
+  let select = document.getElementById('saleProdSelect');
+  let prodId = select.value;
+  let prod = localDB.products.find(p => p.id == prodId);
+  let qty = parseInt(document.getElementById('saleQty').value) || 1;
+  if(!prod || prod.stock < qty) return alert('Insufficient stock!');
+
+  prod.stock -= qty;
+  let total = parseFloat(document.getElementById('saleTotal').value) || (prod.price * qty);
+  let buyPrice = parseFloat(prod.buy_price || 0);
+  let profit = (prod.price - buyPrice) * qty;
+  let paymentMode = document.getElementById('salePaymentMode').value;
+  let customer = document.getElementById('saleCustomer').value.trim() || 'Walk-in Customer';
+
+  let sale = {
+    id: Date.now(),
+    tenant_id: tenantId,
+    product_id: prod.id,
+    product_name: prod.name,
+    qty,
+    total,
+    profit,
+    payment_mode: paymentMode,
+    created_at: new Date().toISOString()
+  };
+
+  localDB.sales.unshift(sale);
+  localDB.queue.push({ type: 'sale', data: sale });
+  localDB.queue.push({ type: 'product', data: prod });
+
+  if(paymentMode === 'Debt') {
+    let debt = { id: Date.now(), tenant_id: tenantId, customer, desc: prod.name, amount: total, paid: false, created_at: new Date().toISOString() };
+    localDB.debts.unshift(debt);
+    localDB.queue.push({ type: 'debt', data: debt });
   }
 
   saveLocal();
-  renderProducts();
+  closeSellModal();
+  refreshAll();
+  syncNow();
+  alert('Sale completed successfully!');
+}
+
+/* EXPENSE MODAL */
+function openExpenseModal() { document.getElementById('expenseModal').style.display = 'flex'; }
+function closeExpenseModal() { document.getElementById('expenseModal').style.display = 'none'; }
+function saveExpense() {
+  let desc = document.getElementById('expDesc').value.trim();
+  let amount = parseFloat(document.getElementById('expAmount').value) || 0;
+  if(!desc || !amount) return alert('Enter description and amount');
+
+  let expense = { id: Date.now(), tenant_id: tenantId, desc, amount, created_at: new Date().toISOString() };
+  localDB.expenses.unshift(expense);
+  localDB.queue.push({ type: 'expense', data: expense });
+  saveLocal();
+  closeExpenseModal();
+  refreshDashboard();
+  syncNow();
+}
+
+function settleDebt(debtId) {
+  let debt = localDB.debts.find(d => d.id == debtId);
+  if(debt) {
+    debt.paid = true;
+    localDB.queue.push({ type: 'debt', data: debt });
+    saveLocal();
+    refreshDashboard();
+    syncNow();
+  }
+}
+
+/* INVENTORY */
+function addProduct() {
+  let name = document.getElementById('prodName').value.trim();
+  let buy_price = parseFloat(document.getElementById('prodBuyPrice').value) || 0;
+  let price = parseFloat(document.getElementById('prodPrice').value) || 0;
+  let stock = parseInt(document.getElementById('prodStock').value) || 0;
+  let barcode = document.getElementById('prodBarcode').value.trim() || ('200' + Date.now().toString().slice(-10));
+
+  if(!name || !price) return alert('Enter product name and selling price');
+
+  let prod = { id: Date.now(), tenant_id: tenantId, name, buy_price, price, stock, barcode };
+  localDB.products.unshift(prod);
+  localDB.queue.push({ type: 'product', data: prod });
+  saveLocal();
+  renderInventory();
   
   document.getElementById('prodName').value = '';
+  document.getElementById('prodBuyPrice').value = '';
   document.getElementById('prodPrice').value = '';
   document.getElementById('prodStock').value = '';
   document.getElementById('prodBarcode').value = '';
   syncNow();
 }
 
-function sellProduct(id) {
-  let prod = localDB.products.find(p => p.id == id && p.tenant_id == tenantId);
-  if(!prod) return alert("Product not found!");
-  if(prod.stock <= 0) return alert("Out of stock!");
-
-  prod.stock--;
-  let sale = { 
-    id: Date.now(), 
-    tenant_id: tenantId, 
-    product_id: prod.id, 
-    product_name: prod.name, 
-    total: prod.price, 
-    qty: 1, 
-    created_at: new Date().toISOString() 
-  };
-  
-  localDB.sales.unshift(sale);
-  localDB.queue.push({ type: 'sale', data: sale });
-  localDB.queue.push({ type: 'product', data: prod });
-
-  saveLocal();
-  renderProducts();
-  renderSales();
-  syncNow();
-  showReceipt(sale);
-}
-
-function handleQuickScan(e) {
-  if(e.key === 'Enter') {
-    let code = e.target.value.trim();
-    if(!code) return;
-    processBarcodeScan(code);
-    e.target.value = '';
-  }
-}
-
-function processBarcodeScan(barcode) {
-  let prod = localDB.products.find(p => p.tenant_id === tenantId && p.barcode === barcode);
-  if(prod) {
-    sellProduct(prod.id);
-  } else {
-    alert(`Barcode "${barcode}" not registered in stock! Enter details in "Add Inventory" to register it.`);
-    document.getElementById('prodBarcode').value = barcode;
-    document.getElementById('prodName').focus();
-  }
-}
-
-function renderProducts() {
+function renderInventory() {
   let search = (document.getElementById('searchStock')?.value || '').toLowerCase();
   let myProds = localDB.products.filter(p => p.tenant_id == tenantId && p.name.toLowerCase().includes(search));
   
   document.getElementById('stockCount').innerText = myProds.length;
-  document.getElementById('stockList').innerHTML = myProds.map(p => `
+  document.getElementById('inventoryList').innerHTML = myProds.map(p => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:8px">
       <div>
         <b>${p.name}</b> ${p.stock <= 3 ? '<span class="badge badge-warning">Low Stock</span>' : ''}<br>
-        <small style="color:#64748b">Ksh ${p.price} | Stock: <b>${p.stock}</b> | Code: ${p.barcode || 'N/A'}</small>
+        <small style="color:#64748b">Sell: Ksh ${p.price} | Stock: <b>${p.stock}</b></small>
       </div>
-      <button class="btn btn-sm btn-accent" onclick="sellProduct(${p.id})">Sell</button>
-    </div>`).join('') || '<small style="color:#94a3b8">No products found</small>';
+      <button class="btn btn-sm btn-accent" onclick="restockItem(${p.id})">+ Restock</button>
+    </div>`).join('') || '<small style="color:#94a3b8">No items found</small>';
 }
 
-function renderSales() {
-  let mySales = localDB.sales.filter(s => s.tenant_id == tenantId);
-  
-  // Calculate Totals
-  let totalRev = mySales.reduce((acc, s) => acc + (s.total || 0), 0);
-  let totalQty = mySales.reduce((acc, s) => acc + (s.qty || 1), 0);
-  
-  document.getElementById('todayTotal').innerText = `Ksh ${totalRev.toLocaleString()}`;
-  document.getElementById('todayItemsCount').innerText = totalQty;
+function restockItem(id) {
+  let prod = localDB.products.find(p => p.id == id);
+  let qty = prompt(`Add stock quantity for ${prod.name}:`, "10");
+  if(qty && !isNaN(qty)) {
+    prod.stock += parseInt(qty);
+    localDB.queue.push({ type: 'product', data: prod });
+    saveLocal();
+    renderInventory();
+    refreshDashboard();
+    syncNow();
+  }
+}
 
-  document.getElementById('salesList').innerHTML = mySales.slice(0, 15).map(s => `
-    <div style="display:flex; justify-content:space-between; padding: 6px 0; border-bottom: 1px solid #f1f5f9;">
-      <span>• <b>${s.product_name}</b> (${s.qty || 1})</span>
-      <span>Ksh ${s.total} <button class="btn btn-sm btn-secondary" style="padding:2px 6px; font-size:10px;" onclick='showReceipt(${JSON.stringify(s)})'>Receipt</button></span>
+function renderSalesHistory() {
+  let mySales = localDB.sales.filter(s => s.tenant_id == tenantId);
+  document.getElementById('salesHistoryList').innerHTML = mySales.map(s => `
+    <div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+      <span>• <b>${s.product_name}</b> (x${s.qty || 1}) <br><small>${s.payment_mode}</small></span>
+      <span style="font-weight:bold;">Ksh ${s.total}</span>
     </div>
   `).join('') || 'No sales recorded yet';
-
-  document.getElementById('queueTxt').innerText = `${localDB.queue.length} pending`;
 }
 
-/* RECEIPT MODAL & PRINTING */
-function showReceipt(sale) {
-  let modal = document.getElementById('receiptModal');
-  let content = document.getElementById('receiptContent');
-  
-  content.innerHTML = `
-    <div style="text-align:center; margin-bottom:12px;">
-      <h3 style="margin-bottom:2px">${tenantData.shop_name}</h3>
-      <p style="font-size:11px; color:#64748b">${tenantData.county} | Tel: ${tenantData.phone}</p>
-      <p style="font-size:10px; color:#94a3b8">Receipt #${sale.id}</p>
-    </div>
-    <hr style="border-top:1px dashed #ccc; margin:10px 0;">
-    <div style="display:flex; justify-content:space-between;">
-      <span>Item:</span> <b>${sale.product_name}</b>
-    </div>
-    <div style="display:flex; justify-content:space-between;">
-      <span>Qty:</span> <span>${sale.qty || 1}</span>
-    </div>
-    <div style="display:flex; justify-content:space-between;">
-      <span>Price:</span> <span>Ksh ${sale.total}</span>
-    </div>
-    <hr style="border-top:1px dashed #ccc; margin:10px 0;">
-    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:15px;">
-      <span>TOTAL:</span> <span>Ksh ${sale.total}</span>
-    </div>
-    <div style="text-align:center; margin-top:16px; font-size:10px; color:#64748b;">
-      Thank you for shopping with us!<br>${new Date(sale.created_at).toLocaleString()}
-    </div>
-  `;
-  modal.style.display = 'flex';
+/* CAMERA BARCODE SCANNER */
+function openScannerModal() {
+  document.getElementById('scannerModal').style.display = 'flex';
+  html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 150 } });
+  html5QrcodeScanner.render((decodedText) => {
+    let prod = localDB.products.find(p => p.tenant_id === tenantId && p.barcode === decodedText);
+    closeScannerModal();
+    if(prod) {
+      openSellModal();
+      document.getElementById('saleProdSelect').value = prod.id;
+      updateSellPrice();
+    } else {
+      alert(`Scanned barcode "${decodedText}" not found. Please add it to inventory.`);
+      switchTab('inventory');
+      document.getElementById('prodBarcode').value = decodedText;
+    }
+  }, (err) => {});
 }
-
-function closeReceipt() {
-  document.getElementById('receiptModal').style.display = 'none';
-}
-
-/* CAMERA BARCODE SCANNER INTEGRATION */
-function toggleCameraScanner() {
-  let scannerDiv = document.getElementById('interactive-scanner');
-  if(scannerDiv.style.display === 'block') {
-    stopCameraScanner();
-  } else {
-    scannerDiv.style.display = 'block';
-    html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 150 } });
-    html5QrcodeScanner.render((decodedText) => {
-      processBarcodeScan(decodedText);
-      stopCameraScanner();
-    }, (error) => {
-      // Ignore scan frame error
-    });
-  }
-}
-
-function stopCameraScanner() {
+function closeScannerModal() {
   if(html5QrcodeScanner) {
-    html5QrcodeScanner.clear().catch(e => console.error(e));
+    html5QrcodeScanner.clear().catch(e => {});
     html5QrcodeScanner = null;
   }
-  document.getElementById('interactive-scanner').style.display = 'none';
+  document.getElementById('scannerModal').style.display = 'none';
 }
 
-/* CSV EXPORT */
-function exportSalesCSV() {
+function exportCSV() {
   let mySales = localDB.sales.filter(s => s.tenant_id == tenantId);
-  if(!mySales.length) return alert('No sales data to export!');
-  
-  let csvContent = "data:text/csv;charset=utf-8,ID,Product Name,Quantity,Total (Ksh),Timestamp\n" 
-    + mySales.map(e => `${e.id},"${e.product_name}",${e.qty || 1},${e.total},${e.created_at}`).join("\n");
-  
-  let encodedUri = encodeURI(csvContent);
+  if(!mySales.length) return alert('No sales data!');
+  let csv = "data:text/csv;charset=utf-8,ID,Product,Qty,Total,PaymentMode,Date\n" + mySales.map(s => `${s.id},"${s.product_name}",${s.qty},${s.total},${s.payment_mode},${s.created_at}`).join("\n");
   let link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", `dukapulse_sales_${tenantId}_${Date.now()}.csv`);
+  link.setAttribute("href", encodeURI(csv));
+  link.setAttribute("download", `sales_${tenantId}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
 }
 
-async function renderAdmin() {
-  try {
-    let { data: tenants } = await supabaseClient.from('tenants').select('*').limit(100);
-    let txt = `TOTAL TENANTS: ${tenants ? tenants.length : 0}\n`;
-    if(tenants) txt += tenants.map(t => `${t.id} | ${t.shop_name} | ${t.county}`).join('\n');
-    document.getElementById('adminView').innerText = txt;
-  } catch(e) {
-    document.getElementById('adminView').innerText = 'Super Admin sync failed.';
-  }
-}
-
 async function syncNow() {
-  if(!navigator.onLine) { 
-    document.getElementById('statusTxt').innerText = 'OFFLINE'; 
-    return; 
-  }
+  if(!navigator.onLine) { document.getElementById('statusTxt').innerText = 'OFFLINE'; return; }
   document.getElementById('statusTxt').innerText = 'SYNCING...';
   let queue = [...localDB.queue];
   for(let item of queue) {
     try {
       if(item.type == 'product') await supabaseClient.from('products').upsert(item.data);
       if(item.type == 'sale') await supabaseClient.from('sales').insert(item.data);
+      if(item.type == 'expense') await supabaseClient.from('expenses').upsert(item.data);
+      if(item.type == 'debt') await supabaseClient.from('debts').upsert(item.data);
       localDB.queue = localDB.queue.filter(q => q.data.id != item.data.id);
-    } catch(e) { console.log(e); }
+    } catch(e) {}
   }
   saveLocal();
-  renderSales();
-  renderAdmin();
   document.getElementById('statusTxt').innerText = 'ONLINE ✓';
 }
-
-setInterval(() => {
-  document.getElementById('onlineDot').style.color = navigator.onLine ? '#10b981' : '#ef4444';
-}, 2000);
 
 if(tenantData) showApp();
 </script>
