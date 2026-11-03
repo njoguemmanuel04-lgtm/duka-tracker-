@@ -4,164 +4,234 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Duka Tracker</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#10b981">
+<script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js'); }</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
-body{background:#f1f5f9;padding-bottom:90px}
-.header{background:white;padding:14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px rgba(0,0,0,.05)}
-.logo{font-weight:900;font-size:18px} .logo span{color:#10b981}
-.badge{font-size:10px;background:#dcfce7;color:#166534;padding:3px 8px;border-radius:20px;font-weight:800}
-.card{background:white;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.btn{background:#0f172a;color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}
-.btn-green{background:#10b981} .btn-orange{background:#f59e0b}
-.input{width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;margin-top:8px}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:10px;border-top:1px solid #e2e8f0;z-index:20}
-.nav div{text-align:center;font-size:11px;cursor:pointer;color:#64748b} .nav .active{color:#10b981;font-weight:800}
-.item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;align-items:center}
+body{background:#f8fafc;padding-bottom:80px}
+.header{background:#0f172a;color:#fff;padding:14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.logo{font-weight:900;font-size:20px}.logo span{color:#10b981}
+.card{background:#fff;border-radius:16px;padding:14px;margin:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat h2{font-size:22px}.stat p{font-size:11px;color:#64748b}
+.btn{background:#0f172a;color:#fff;border:none;padding:10px 12px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;width:100%}
+.btn-green{background:#10b981}.btn-red{background:#ef4444}.btn-orange{background:#f97316}.btn-blue{background:#2563eb}
+.input,.select{width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;font-size:14px}
+.tabs{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #e2e8f0;z-index:20}
+.tabs button{flex:1;padding:12px 4px;border:none;background:#fff;font-weight:800;font-size:11px;cursor:pointer}
+.tabs button.active{color:#10b981;border-top:3px solid #10b981}
+.page{display:none}.page.active{display:block}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800}
+.badge-green{background:#dcfce7;color:#166534}.badge-red{background:#fee2e2;color:#991b1b}.badge-orange{background:#ffedd5;color:#9a3412}
+.small{font-size:11px;color:#64748b}
 </style>
 </head>
 <body>
 <div class="header">
-<div><div class="logo">🏪 <span id="headerShopName">Loading...</span></div><small><span class="badge" id="tenantBadge">...</span> <span id="syncStatus" style="font-size:11px;color:#64748b">● Online | 0 pending</span></small></div>
-<div style="display:flex;gap:6px"><button class="btn" style="padding:8px 12px" onclick="showTab('sales')">Scan</button><button class="btn" style="padding:8px 12px" onclick="showTab('profile')">👤</button></div>
+<div><div class="logo">Duka<span>Tracker</span></div><div id="shopName" style="font-size:11px;opacity:.8">Loading...</div></div>
+<div style="text-align:right;font-size:11px"><div id="syncStatus">🟢 Online</div><div id="pendingCount"></div><div id="tenantIdShow"></div></div>
 </div>
 
-<div id="tab-dashboard">
-<div class="card" style="background:#fef3c7;border:1px solid #fde68a"><div style="display:flex;justify-content:space-between;align-items:center"><span>⚠️ Warning: <span id="lowCount">0</span> product(s) low!</span><button class="btn btn-orange" onclick="showTab('inventory')">RESTOCK</button></div></div>
-
-<div class="card"><h2>Dashboard</h2><div style="display:flex;justify-content:space-between;margin-top:10px"><div><p style="font-size:12px;color:#64748b">Sales Today</p><h1 id="salesToday">Ksh 0</h1></div><button class="btn btn-green" onclick="showTab('sales')">+ New Sale</button></div>
-<div class="grid3" style="margin-top:14px;text-align:center">
-<div style="background:#f8fafc;padding:10px;border-radius:10px"><small>Net Profit Today</small><div id="profitToday" style="font-weight:800;color:#10b981">Ksh 0</div></div>
-<div style="background:#f8fafc;padding:10px;border-radius:10px"><small>Orders</small><div id="ordersToday" style="font-weight:800">0</div></div>
-<div style="background:#f8fafc;padding:10px;border-radius:10px"><small>Avg Order</small><div id="avgOrder" style="font-weight:800">Ksh 0</div></div>
+<!-- DASHBOARD -->
+<div id="page-home" class="page active">
+<div class="grid4">
+<div class="card stat"><h2 id="salesToday">Ksh 0</h2><p>Sales TODAY</p><small id="ordersToday"></small></div>
+<div class="card stat"><h2 id="profitToday">Ksh 0</h2><p>Profit Today</p></div>
+<div class="card stat"><h2 id="mkopoTotal">Ksh 0</h2><p>Mkopo Unpaid</p></div>
+<div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
 </div>
-<div class="grid3" style="margin-top:10px;text-align:center">
-<div style="background:#f0fdf4;padding:10px;border-radius:10px"><small>M-Pesa</small><div id="mpesaToday" style="font-weight:800">Ksh 0</div></div>
-<div style="background:#f8fafc;padding:10px;border-radius:10px"><small>Cash</small><div id="cashToday" style="font-weight:800">Ksh 0</div></div>
-<div style="background:#fef2f2;padding:10px;border-radius:10px"><small style="color:#ef4444">Debt (Mkopo)</small><div id="debtToday" style="font-weight:800;color:#ef4444">Ksh 0</div></div>
-</div>
+<div class="card"><h3>Quick Sell</h3><p class="small">Tap a product to sell fast</p><div id="quickSell" style="margin-top:10px"></div></div>
+<div class="card"><h3>Today's Sales</h3><div id="todayList"></div></div>
 </div>
 
-<div class="card"><div style="display:flex;justify-content:space-between"><h3>🧾 Shop Expenses (Matumizi)</h3><button class="btn" style="padding:6px 10px;font-size:12px" onclick="addExpense()">+ Add Expense</button></div><div style="display:flex;justify-content:space-between;margin-top:10px"><span>Today's Matumizi Total:</span><b id="expenseToday" style="color:#f59e0b">Ksh 0</b></div><div id="expenseList"></div></div>
-
-<div class="card"><div style="display:flex;justify-content:space-between"><h3>📖 Active Mkopo (Debts) <span id="mkopoTotal" style="font-size:12px;background:#fee2e2;padding:3px 8px;border-radius:20px">Total: Ksh 0</span></h3><button class="btn" style="padding:6px 10px;font-size:12px;background:#fee2e2;color:#991b1b" onclick="addMkopo()">+ Add Mkopo</button></div><div id="mkopoList" style="margin-top:10px">No active debts.</div></div>
-
-<div class="card"><div style="display:flex;justify-content:space-between"><h3>Inventory Preview</h3><span style="color:#10b981;cursor:pointer" onclick="showTab('inventory')">View all</span></div><div id="inventoryPreview"></div></div>
+<!-- SELL -->
+<div id="page-sell" class="page">
+<div class="card"><h3>🛒 Sell Product</h3>
+<select id="sellProduct" class="select"></select>
+<input id="sellQty" type="number" class="input" value="1" min="1" placeholder="Quantity">
+<select id="sellPayment" class="select"><option>Cash</option><option>M-Pesa</option><option>Debt</option></select>
+<input id="sellCustomer" class="input" placeholder="Customer name (for Debt only)">
+<button class="btn btn-green" onclick="doSell()">Sell Now</button>
+</div>
+<div class="card"><h3>All Sales</h3><div id="allSalesList"></div></div>
 </div>
 
-<div id="tab-sales" style="display:none"><div class="card"><h3>New Sale</h3><input id="searchSale" class="input" placeholder="Search product..." oninput="renderSaleList()"><div id="saleList" style="margin-top:10px"></div></div><div class="card"><h3>Today Sales</h3><div id="salesList"></div></div></div>
+<!-- INVENTORY -->
+<div id="page-stock" class="page">
+<div class="card" style="background:#f0fdf4;border:2px solid #bbf7d0"><h3>➕ Add Product</h3>
+<input id="pName" class="input" placeholder="Product name e.g Mkate">
+<input id="pPrice" type="number" class="input" placeholder="Selling Price e.g 60">
+<input id="pCost" type="number" class="input" placeholder="Buying Cost e.g 50">
+<input id="pStock" type="number" class="input" placeholder="Stock e.g 10">
+<button class="btn btn-green" onclick="addProduct()">Add Product</button>
+<button class="btn" style="margin-top:8px;background:#e0f2fe;color:#075985" onclick="addSample()">+ Add Sample Products (for new shop)</button>
+</div>
+<div class="card"><h3>Inventory</h3><div id="stockList"></div></div>
+</div>
 
-<div id="tab-inventory" style="display:none"><div class="card"><h3>Add Product</h3><input id="pName" class="input" placeholder="Product name e.g Mkate"><input id="pPrice" type="number" class="input" placeholder="Selling Price"><input id="pCost" type="number" class="input" placeholder="Cost Price"><input id="pStock" type="number" class="input" placeholder="Stock"><button class="btn btn-green" style="width:100%;margin-top:10px" onclick="addProduct()">Add Product</button></div><div class="card"><h3>All Products</h3><div id="inventoryList"></div></div></div>
+<!-- MKOPO -->
+<div id="page-mkopo" class="page">
+<div class="card"><h3>💳 Mkopo - Debts</h3><p class="small">Debt sales appear here automatically. Mark Paid when customer pays.</p><div id="mkopoList" style="margin-top:10px"></div></div>
+</div>
 
-<div id="tab-profile" style="display:none"><div class="card"><h3>Profile</h3><p>Shop: <b id="profileShop">...</b></p><p>Tenant ID: <b id="profileTenant">...</b></p><p>Link: <span id="profileLink" style="font-size:11px;word-break:break-all;color:#0f766e"></span></p><button class="btn" style="width:100%;margin-top:10px" onclick="copyLink()">📋 Copy My Link</button><button class="btn" style="width:100%;margin-top:10px;background:#dcfce7;color:#166534" onclick="forceResyncAll()">🔄 Force Sync All to Cloud</button></div></div>
+<!-- MATUMIZI -->
+<div id="page-matumizi" class="page">
+<div class="card"><h3>💸 Matumizi - Expenses</h3>
+<input id="mDesc" class="input" placeholder="What did you spend on? e.g Transport">
+<input id="mAmount" type="number" class="input" placeholder="Amount e.g 200">
+<button class="btn btn-orange" onclick="addMatumizi()">Add Matumizi</button></div>
+<div class="card"><h3>Today's Matumizi</h3><div id="matumiziList"></div></div>
+</div>
 
-<div class="nav"><div class="active" onclick="showTab('dashboard',this)">🏠<br>Dashboard</div><div onclick="showTab('sales',this)">🧾<br>Sales</div><div onclick="showTab('inventory',this)">📦<br>Inventory</div><div onclick="showTab('profile',this)">👤<br>Profile</div></div>
+<div class="tabs">
+<button id="tab-home" class="active" onclick="showPage('home')">🏠<br>Home</button>
+<button id="tab-sell" onclick="showPage('sell')">🛒<br>Sell</button>
+<button id="tab-stock" onclick="showPage('stock')">📦<br>Stock</button>
+<button id="tab-mkopo" onclick="showPage('mkopo')">💳<br>Mkopo</button>
+<button id="tab-matumizi" onclick="showPage('matumizi')">💸<br>Matumizi</button>
+</div>
 
 <script>
 const SUPABASE_URL="https://mpwyzajhbzaabtdhqumj.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
 const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const params=new URLSearchParams(location.search);
+let TENANT=params.get('tenant')||localStorage.getItem('duka_tenant')||'mwea-001';
+localStorage.setItem('duka_tenant',TENANT);
+document.getElementById('tenantIdShow').innerText=TENANT;
 
-// === FIX: Tenant from LINK, shop name from Supabase, wipe old data on switch ===
-let urlTenant=new URLSearchParams(location.search).get('tenant');
-let savedTenant=localStorage.getItem('tenantId');
-let tenantId=urlTenant||savedTenant||'mwea-general-460';
-if(urlTenant && urlTenant!==savedTenant){
-  localStorage.removeItem('duka_db');
-  localStorage.removeItem('shopName');
-  localStorage.setItem('tenantId',urlTenant);
+let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
+let sales=JSON.parse(localStorage.getItem('duka_sales_'+TENANT)||'[]');
+let matumizi=JSON.parse(localStorage.getItem('duka_matumizi_'+TENANT)||'[]');
+let pending=JSON.parse(localStorage.getItem('duka_pending_'+TENANT)||'[]');
+
+function saveLocal(){
+ localStorage.setItem('duka_products_'+TENANT,JSON.stringify(products));
+ localStorage.setItem('duka_sales_'+TENANT,JSON.stringify(sales));
+ localStorage.setItem('duka_matumizi_'+TENANT,JSON.stringify(matumizi));
+ localStorage.setItem('duka_pending_'+TENANT,JSON.stringify(pending));
+ document.getElementById('pendingCount').innerText=pending.length?pending.length+' pending • will sync':''; 
 }
-localStorage.setItem('tenantId',tenantId);
-document.getElementById('tenantBadge').innerText=tenantId;
-document.getElementById('profileTenant').innerText=tenantId;
-document.getElementById('profileLink').innerText=`https://duka-tracker-seven.vercel.app/?tenant=${tenantId}`;
-
-async function loadShopName(){
-  let {data}=await client.from('tenants').select('shop_name,is_active').eq('id',tenantId).single();
-  if(data && data.is_active===false){
-    document.body.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f172a;color:white;text-align:center;padding:20px"><div><h1 style="font-size:50px">🚫</h1><h2>Shop Blocked</h2><p style="margin-top:10px">${data.shop_name} is deactivated. Pay Ksh 300 to activate.</p><p style="margin-top:10px;color:#10b981">M-Pesa: 0116982197</p></div></div>`;
-    return;
-  }
-  let shopName=data?data.shop_name:tenantId;
-  document.getElementById('headerShopName').innerText=shopName;
-  document.getElementById('profileShop').innerText=shopName;
+function showPage(p){
+ document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+ document.querySelectorAll('.tabs button').forEach(e=>e.classList.remove('active'));
+ document.getElementById('page-'+p).classList.add('active');
+ document.getElementById('tab-'+p).classList.add('active');
+ renderAll();
 }
-loadShopName();
-
-let db=JSON.parse(localStorage.getItem('duka_db')||'{"products":[],"sales":[],"expenses":[],"mkopo":[],"queue":[]}');
-function save(){ localStorage.setItem('duka_db',JSON.stringify(db)); render(); syncNow(); }
-function showTab(tab,el){ ['dashboard','sales','inventory','profile'].forEach(t=>document.getElementById('tab-'+t).style.display=t==tab?'block':'none'); document.querySelectorAll('.nav div').forEach(d=>d.classList.remove('active')); if(el)el.classList.add('active'); }
-
+function addSample(){
+ if(products.length>0) return alert('You already have products');
+ products=[
+  {id:Date.now()+1,name:'Mkate',price:60,cost:50,stock:20},
+  {id:Date.now()+2,name:'Milk 500ml',price:70,cost:60,stock:15},
+  {id:Date.now()+3,name:'Sugar 1kg',price:150,cost:130,stock:10},
+  {id:Date.now()+4,name:'Eggs (1)',price:30,cost:22,stock:30},
+  {id:Date.now()+5,name:'Soda 300ml',price:80,cost:65,stock:12},
+ ];
+ saveLocal(); renderAll(); alert('Sample products added! Edit or delete them.');
+}
 function addProduct(){
-  let name=document.getElementById('pName').value.trim(); let price=+document.getElementById('pPrice').value; let cost=+document.getElementById('pCost').value||Math.floor(price*0.83); let stock=+document.getElementById('pStock').value||0;
-  if(!name||!price) return alert('Fill name & price');
-  let p={id:Date.now(), tenant_id:tenantId, name, price, cost, stock, created_at:new Date().toISOString()};
-  db.products.push(p); db.queue.push({type:'product',data:p});
-  document.getElementById('pName').value='';document.getElementById('pPrice').value='';document.getElementById('pCost').value='';document.getElementById('pStock').value='';
-  save();
+ let n=document.getElementById('pName').value.trim();
+ let pr=parseFloat(document.getElementById('pPrice').value);
+ let c=parseFloat(document.getElementById('pCost').value||pr*0.83);
+ let s=parseInt(document.getElementById('pStock').value||0);
+ if(!n||!pr) return alert('Fill name and price');
+ products.push({id:Date.now(),name:n,price:pr,cost:c,stock:s});
+ ['pName','pPrice','pCost','pStock'].forEach(i=>document.getElementById(i).value='');
+ saveLocal(); renderAll(); showPage('stock');
 }
-function sellProduct(id, payment){
-  let p=db.products.find(x=>x.id==id); if(!p||p.stock<=0) return alert('Out of stock');
-  p.stock--;
-  let s={id:Date.now(), tenant_id:tenantId, product_id:p.id, product_name:p.name, total:p.price, cost:p.cost, payment:payment||'Cash', created_at:new Date().toISOString()};
-  db.sales.push(s); db.queue.push({type:'sale',data:s});
-  if(payment=='Debt'){ let c=prompt('Customer name for Mkopo?')||'Customer'; let m={id:Date.now()+1, tenant_id:tenantId, customer:c, amount:p.price, product:p.name, paid:false, created_at:new Date().toISOString()}; db.mkopo.push(m); db.queue.push({type:'mkopo',data:m}); }
-  save();
+function addMatumizi(){
+ let d=document.getElementById('mDesc').value.trim();
+ let a=parseFloat(document.getElementById('mAmount').value);
+ if(!d||!a) return alert('Fill description and amount');
+ matumizi.push({id:Date.now(),desc:d,amount:a,created_at:new Date().toISOString()});
+ document.getElementById('mDesc').value=''; document.getElementById('mAmount').value='';
+ saveLocal(); renderAll(); alert('Matumizi saved');
 }
-function addExpense(){ let n=prompt('Expense name?'); let a=+prompt('Amount?'); if(!n||!a) return; let e={id:Date.now(), tenant_id:tenantId, name:n, amount:a, created_at:new Date().toISOString()}; db.expenses.push(e); db.queue.push({type:'expense',data:e}); save(); }
-function addMkopo(){ let c=prompt('Customer?'); let a=+prompt('Amount?'); let pr=prompt('Product?')||'Debt'; if(!c||!a) return; let m={id:Date.now(), tenant_id:tenantId, customer:c, amount:a, product:pr, paid:false, created_at:new Date().toISOString()}; db.mkopo.push(m); db.queue.push({type:'mkopo',data:m}); save(); }
-function payMkopo(id){ let m=db.mkopo.find(x=>x.id==id); if(!m) return; m.paid=true; db.queue.push({type:'mkopo_paid',data:m}); save(); }
-function copyLink(){ navigator.clipboard.writeText(`https://duka-tracker-seven.vercel.app/?tenant=${tenantId}`); alert('Link copied'); }
-function forceResyncAll(){ let c=0; db.products.filter(p=>p.tenant_id==tenantId).forEach(p=>{db.queue.push({type:'product',data:p});c++}); db.sales.filter(s=>s.tenant_id==tenantId).forEach(s=>{db.queue.push({type:'sale',data:s});c++}); db.expenses.filter(e=>e.tenant_id==tenantId).forEach(e=>{db.queue.push({type:'expense',data:e});c++}); db.mkopo.filter(m=>m.tenant_id==tenantId).forEach(m=>{db.queue.push({type:'mkopo',data:m});c++}); save(); alert(`Queued ${c} items`); syncNow(); }
+async function doSell(){
+ let pid=document.getElementById('sellProduct').value;
+ let qty=parseInt(document.getElementById('sellQty').value||1);
+ let pay=document.getElementById('sellPayment').value;
+ let cust=document.getElementById('sellCustomer').value.trim();
+ let prod=products.find(p=>String(p.id)==String(pid));
+ if(!prod) return alert('Add product first in Stock');
+ if(prod.stock<qty) return alert('Not enough stock! Stock: '+prod.stock);
+ if(pay=='Debt' && !cust) return alert('Enter customer name for Debt');
+ prod.stock-=qty;
+ let total=prod.price*qty; let cost=prod.cost*qty;
+ let sale={id:Date.now(),product_name:prod.name,qty,total,cost,payment:pay,customer:cust||'',is_paid:pay!=='Debt',created_at:new Date().toISOString(),tenant_id:TENANT};
+ sales.unshift(sale); pending.push(sale);
+ saveLocal(); renderAll(); trySync();
+ alert(`Sold ${prod.name} x${qty} = Ksh ${total} (${pay})`);
+}
+function quickSellById(id){
+ let p=products.find(x=>String(x.id)==String(id));
+ if(!p) return;
+ document.getElementById('sellProduct').value=p.id;
+ document.getElementById('sellQty').value=1;
+ showPage('sell');
+}
+function markPaid(id){
+ let s=sales.find(x=>x.id==id); if(!s) return;
+ s.is_paid=true; s.payment='Cash'; saveLocal(); renderAll(); alert('Marked as Paid');
+}
+function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
+function addStock(id){ let q=prompt('Add how many?','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseInt(q); saveLocal(); renderAll(); }
 
-function render(){
-  let today=new Date().toDateString();
-  let sales=db.sales.filter(s=>s.tenant_id==tenantId && new Date(s.created_at).toDateString()==today);
-  let total=sales.reduce((a,b)=>a+b.total,0);
-  let profit=sales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0);
-  document.getElementById('salesToday').innerText='Ksh '+total.toLocaleString();
-  document.getElementById('profitToday').innerText='Ksh '+Math.floor(profit).toLocaleString();
-  document.getElementById('ordersToday').innerText=sales.length;
-  document.getElementById('avgOrder').innerText='Ksh '+(sales.length?Math.floor(total/sales.length):0).toLocaleString();
-  document.getElementById('mpesaToday').innerText='Ksh '+sales.filter(s=>s.payment=='M-Pesa').reduce((a,b)=>a+b.total,0).toLocaleString();
-  document.getElementById('cashToday').innerText='Ksh '+sales.filter(s=>s.payment=='Cash').reduce((a,b)=>a+b.total,0).toLocaleString();
-  document.getElementById('debtToday').innerText='Ksh '+sales.filter(s=>s.payment=='Debt').reduce((a,b)=>a+b.total,0).toLocaleString();
-  let ex=db.expenses.filter(e=>e.tenant_id==tenantId && new Date(e.created_at).toDateString()==today);
-  document.getElementById('expenseToday').innerText='Ksh '+ex.reduce((a,b)=>a+b.amount,0).toLocaleString();
-  document.getElementById('expenseList').innerHTML=ex.map(e=>`<div class="item"><span>${e.name}</span><b>Ksh ${e.amount}</b></div>`).join('');
-  let mk=db.mkopo.filter(m=>m.tenant_id==tenantId && !m.paid);
-  document.getElementById('mkopoTotal').innerText='Total: Ksh '+mk.reduce((a,b)=>a+b.amount,0).toLocaleString();
-  document.getElementById('mkopoList').innerHTML=mk.length?mk.map(m=>`<div class="item"><span><b>${m.customer}</b> - ${m.product} - Ksh ${m.amount}</span><button class="btn btn-green" style="padding:5px 10px;font-size:11px" onclick="payMkopo(${m.id})">Paid</button></div>`).join(''):'No active debts.';
-  let prods=db.products.filter(p=>p.tenant_id==tenantId);
-  document.getElementById('lowCount').innerText=prods.filter(p=>p.stock<=2).length;
-  document.getElementById('inventoryPreview').innerHTML=prods.slice(0,5).map(p=>`<div class="item"><span>${p.name} (${p.stock})</span><b>Ksh ${p.price}</b></div>`).join('')||'No products';
-  document.getElementById('inventoryList').innerHTML=prods.map(p=>`<div class="item"><span><b>${p.name}</b><br><small>Stock: ${p.stock} | Cost: ${p.cost}</small></span><div><b>Ksh ${p.price}</b><br><button class="btn" style="padding:4px 8px;font-size:11px" onclick="sellProduct(${p.id},'Cash')">Cash</button> <button class="btn btn-green" style="padding:4px 8px;font-size:11px" onclick="sellProduct(${p.id},'M-Pesa')">M-Pesa</button> <button class="btn" style="padding:4px 8px;font-size:11px;background:#fee2e2;color:#991b1b" onclick="sellProduct(${p.id},'Debt')">Debt</button></div></div>`).join('')||'No products';
-  document.getElementById('salesList').innerHTML=sales.slice().reverse().map(s=>`<div class="item"><span>${s.product_name}<br><small>${new Date(s.created_at).toLocaleTimeString()} - ${s.payment}</small></span><b>Ksh ${s.total}</b></div>`).join('')||'No sales today';
-  document.getElementById('syncStatus').innerText=`● Online | ${db.queue.length} pending`;
-  renderSaleList();
+async function trySync(){
+ if(!navigator.onLine) return;
+ if(pending.length==0) return;
+ let toSend=[...pending];
+ for(let s of toSend){
+   let {error}=await client.from('sales').insert({tenant_id:TENANT,product_name:s.product_name,qty:s.qty,total:s.total,cost:s.cost,payment:s.payment,customer:s.customer||null,is_paid:s.is_paid,created_at:s.created_at});
+   if(!error) pending=pending.filter(x=>x.id!==s.id);
+ }
+ saveLocal();
 }
-function renderSaleList(){
-  let q=(document.getElementById('searchSale')?.value||'').toLowerCase();
-  let prods=db.products.filter(p=>p.tenant_id==tenantId && p.name.toLowerCase().includes(q));
-  document.getElementById('saleList').innerHTML=prods.map(p=>`<div class="item"><span><b>${p.name}</b><br><small>Stock ${p.stock}</small></span><div><b>Ksh ${p.price}</b> <button class="btn" style="padding:5px 8px;font-size:11px" onclick="sellProduct(${p.id},'Cash')">Cash</button> <button class="btn btn-green" style="padding:5px 8px;font-size:11px" onclick="sellProduct(${p.id},'M-Pesa')">M-Pesa</button> <button class="btn" style="padding:5px 8px;font-size:11px;background:#fee2e2;color:#991b1b" onclick="sellProduct(${p.id},'Debt')">Debt</button></div></div>`).join('')||'No products';
+async function loadShop(){
+ document.getElementById('shopName').innerText='Loading...';
+ let {data}=await client.from('tenants').select('*').eq('id',TENANT).single();
+ if(data){
+   if(data.is_active===false){ document.body.innerHTML='<div style="padding:30px;text-align:center"><h2>⛔ Shop Blocked</h2><p>Contact Admin. Your subscription expired.</p><p>Pay Ksh 300 to reactivate.</p></div>'; return; }
+   document.getElementById('shopName').innerText=data.shop_name+' • '+data.county;
+ } else {
+   document.getElementById('shopName').innerText=TENANT;
+ }
+ // Load cloud sales if online (merge, don't duplicate)
+ let {data:salesCloud}=await client.from('sales').select('*').eq('tenant_id',TENANT).order('created_at',{ascending:false}).limit(200);
+ if(salesCloud && salesCloud.length){
+   let ids=new Set(sales.map(s=>s.id));
+   salesCloud.forEach(cs=>{ if(!ids.has(cs.id)) sales.push(cs); });
+   sales.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+   saveLocal(); renderAll();
+ }
 }
-async function syncNow(){
-  if(!db.queue.length) return;
-  let q=[...db.queue];
-  for(let item of q){
-    try{
-      if(item.type=='product') await client.from('products').upsert(item.data);
-      if(item.type=='sale') await client.from('sales').upsert(item.data);
-      if(item.type=='expense') await client.from('expenses').upsert(item.data);
-      if(item.type=='mkopo') await client.from('mkopo').upsert(item.data);
-      if(item.type=='mkopo_paid') await client.from('mkopo').update({paid:true}).eq('id',item.data.id);
-      db.queue=db.queue.filter(x=>x!==item);
-    }catch(e){}
-  }
-  localStorage.setItem('duka_db',JSON.stringify(db)); render();
+function renderAll(){
+ let todayStr=new Date().toDateString();
+ let todaySales=sales.filter(s=>new Date(s.created_at).toDateString()==todayStr);
+ let todayMat=matumizi.filter(m=>new Date(m.created_at).toDateString()==todayStr);
+ document.getElementById('salesToday').innerText='Ksh '+todaySales.reduce((a,b)=>a+b.total,0).toLocaleString();
+ document.getElementById('ordersToday').innerText=todaySales.length+' orders today';
+ document.getElementById('profitToday').innerText='Ksh '+Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0)).toLocaleString();
+ document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
+ document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
+
+ document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${p.name} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
+ document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${s.product_name}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${s.customer||''}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
+ document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${s.product_name}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
+ document.getElementById('stockList').innerHTML=products.length?products.map(p=>`<div class="row"><div><b>${p.name}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right"><b>Stock: ${p.stock}</b><br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`).join(''):'<p class="small">No products. Add your first product above.</p>';
+ document.getElementById('sellProduct').innerHTML=products.map(p=>`<option value="${p.id}">${p.name} - Ksh ${p.price} (Stock ${p.stock})</option>`).join('')||'<option>No products - Add in Stock</option>';
+ document.getElementById('mkopoList').innerHTML=sales.filter(s=>!s.is_paid).length?sales.filter(s=>!s.is_paid).map(s=>`<div class="row"><div><b>${s.customer||'Customer'}</b><br><span class="small">${s.product_name} x${s.qty} • ${new Date(s.created_at).toLocaleDateString()}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><button class="btn btn-green" style="padding:6px 10px;width:auto;margin-top:4px" onclick="markPaid(${s.id})">Mark Paid</button></div></div>`).join(''):'<p class="small">No active debts 🎉</p>';
+ document.getElementById('matumiziList').innerHTML=todayMat.length?todayMat.map(m=>`<div class="row"><div><b>${m.desc}</b><br><span class="small">${new Date(m.created_at).toLocaleTimeString()}</span></div><b>Ksh ${m.amount}</b></div>`).join(''):'<p class="small">No matumizi today</p>';
 }
-render(); setInterval(syncNow, 5000);
+window.addEventListener('online',()=>{document.getElementById('syncStatus').innerText='🟢 Online'; trySync();});
+window.addEventListener('offline',()=>{document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';});
+if(!navigator.onLine) document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';
+saveLocal(); renderAll(); loadShop(); trySync();
+setInterval(trySync,10000);
 </script>
 </body>
 </html>
