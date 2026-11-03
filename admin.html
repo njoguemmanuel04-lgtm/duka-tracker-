@@ -10,7 +10,7 @@
 .logo{font-weight:900;font-size:22px} .logo span{color:#10b981}
 .card{background:white;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .btn{background:#0f172a;color:white;border:none;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px}
-.btn-accent{background:#10b981} .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-accent{background:#10b981} .btn-wa{background:#25D366;color:white} .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat h2{font-size:26px} .stat p{font-size:11px;color:#64748b}
 .table{width:100%;font-size:12px;border-collapse:collapse} .table th{text-align:left;padding:8px;background:#f8fafc} .table td{padding:8px;border-bottom:1px solid #f1f5f9}
 .badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800} .badge-green{background:#dcfce7;color:#166534} .badge-red{background:#fee2e2;color:#991b1b}
@@ -30,12 +30,12 @@
 <div class="card" style="background:#f0fdf4;border:2px solid #bbf7d0">
 <h3>➕ Create New Duka - Own Link</h3>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
-<input id="newShopName" class="input" placeholder="Shop name e.g Embu Shop">
-<input id="newCounty" class="input" placeholder="County e.g Embu">
+<input id="newShopName" class="input" placeholder="Shop name e.g Wanjiku Shop">
+<input id="newCounty" class="input" placeholder="County e.g Mwea">
 <input id="newPhone" class="input" placeholder="Phone e.g 0116982197">
 <input id="newTenantId" class="input" placeholder="Auto ID" readonly>
 </div>
-<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn" style="background:#0f172a" onclick="createTenant()">Create + Get Link</button></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn" onclick="createTenant()">Create + Get Link</button></div>
 <div id="newLinkResult" style="margin-top:12px;background:white;padding:12px;border-radius:10px;display:none"></div>
 </div>
 <div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>All Tenants</h3><input id="search" class="input" placeholder="Search..." style="width:200px" oninput="renderTenants()"></div>
@@ -49,6 +49,13 @@ const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let allTenants=[], allSales=[];
 function loginAdmin(){ if(document.getElementById('adminPass').value!=='admin123') return alert('Wrong password'); document.getElementById('dashboard').style.display='block'; loadData(); }
 function getShopLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
+function formatPhone(p){ if(!p) return ''; let n=p.replace(/\D/g,''); if(n.startsWith('0')) n='254'+n.slice(1); if(n.startsWith('254')) return n; return n; }
+function waLink(shop, id, phone){
+  let link=getShopLink(id);
+  let msg=`Karibu ${shop}! 🎉\n\nYour Duka Tracker is ready.\nClick here to open your shop:\n${link}\n\n- Track sales, profit, stock, mkopo & matumizi\n- Works offline\n- Ksh 300/month\n\nSave this link. Karibu sana!`;
+  if(phone){ return `https://wa.me/${formatPhone(phone)}?text=${encodeURIComponent(msg)}`; }
+  return `https://wa.me/?text=${encodeURIComponent(msg)}`;
+}
 function generateId(){ let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-')||'duka'; let rand=Math.floor(Math.random()*900+100); document.getElementById('newTenantId').value=`${name}-${rand}`; }
 async function createTenant(){
  let shop=document.getElementById('newShopName').value.trim();
@@ -59,8 +66,9 @@ async function createTenant(){
  let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan:'monthly', is_active:true});
  if(error) return alert('Error: '+error.message);
  let link=getShopLink(id);
+ let w=waLink(shop,id,phone);
  document.getElementById('newLinkResult').style.display='block';
- document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>${shop}</b> (${id})<br><a href="${link}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">${link}</a><br><br><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${link}');alert('Copied!')">📋 Copy Link</button>`;
+ document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>${shop}</b> (${id})<br><a href="${link}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">${link}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${link}');alert('Copied!')">📋 Copy Link</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
  loadData();
 }
 async function loadData(){
@@ -85,7 +93,8 @@ function renderTenants(){
  document.getElementById('tenantBody').innerHTML=list.map(t=>{
   let tSalesToday=allSales.filter(s=>s.tenant_id==t.id && new Date(s.created_at).toDateString()==new Date().toDateString());
   let isActive=t.is_active!==false;
-  return `<tr><td><b>${t.shop_name}</b><br><span class="badge">${t.id}</span></td><td>${t.county||'-'}</td><td>${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}</td><td>Ksh ${tSalesToday.reduce((a,b)=>a+b.total,0).toLocaleString()} (${tSalesToday.length})</td><td><button class="btn" style="background:#e6f9ed;color:#0f766e" onclick="navigator.clipboard.writeText('${getShopLink(t.id)}');alert('Copied')">Copy Link</button></td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:${isActive?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Deactivate':'Activate'}</button><button class="btn" style="background:#fee2e2;color:#ef4444" onclick="deleteTenant('${t.id}')">Delete</button></td></tr>`;
+  let w=waLink(t.shop_name,t.id,t.phone);
+  return `<tr><td><b>${t.shop_name}</b><br><span class="badge">${t.id}</span><br><small>${t.phone||''}</small></td><td>${t.county||'-'}</td><td>${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}</td><td>Ksh ${tSalesToday.reduce((a,b)=>a+b.total,0).toLocaleString()} (${tSalesToday.length})</td><td><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:#e6f9ed;color:#0f766e" onclick="navigator.clipboard.writeText('${getShopLink(t.id)}');alert('Copied')">Copy</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">WhatsApp</button></div></td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:${isActive?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Deactivate':'Activate'}</button><button class="btn" style="background:#fee2e2;color:#ef4444" onclick="deleteTenant('${t.id}')">Delete</button></td></tr>`;
  }).join('')||'<tr><td colspan="6">No tenants</td></tr>';
 }
 async function toggleActive(id,current){ if(!confirm((current?'DEACTIVATE - Block shop':'ACTIVATE - Allow shop')+'\n'+id)) return; let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); if(error) return alert(error.message); loadData(); }
