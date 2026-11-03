@@ -8,12 +8,12 @@
 <style>
 :root{--primary:#0f172a;--accent:#10b981;--bg:#f8fafc;--danger:#ef4444}
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
-body{background:var(--bg); padding-bottom: 40px;}
+body{background:var(--bg)}
 .header{background:var(--primary);color:white;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
 .logo{font-weight:900;font-size:22px} .logo span{color:var(--accent)}
 .card{background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin:12px}
-.btn{background:var(--primary);color:white;border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer}
-.btn-accent{background:var(--accent)} .btn-danger{background:var(--danger)} .btn-sm{padding:6px 10px;font-size:12px;}
+.btn{background:var(--primary);color:white;border:none;padding:12px;border-radius:10px;font-weight:800;cursor:pointer}
+.btn-accent{background:var(--accent)} .btn-danger{background:var(--danger)}
 .input{width:100%;padding:12px;border:1px solid #e2e8f0;border-radius:10px}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .stat h2{font-size:28px} .stat p{font-size:12px;color:#64748b}
@@ -28,45 +28,41 @@ body{background:var(--bg); padding-bottom: 40px;}
 <div style="font-size:12px">👑 Empire Control | <span id="conn">ONLINE</span></div>
 </div>
 
-<div class="card" id="loginCard">
+<div class="card">
 <h3>🔒 Admin Login</h3>
 <div style="display:flex;gap:8px;margin-top:10px">
 <input id="adminPass" class="input" type="password" placeholder="Enter admin password: admin123">
 <button class="btn btn-accent" onclick="loginAdmin()">Unlock</button>
 </div>
-<p style="font-size:11px;color:#94a3b8;margin-top:6px">Default password: admin123</p>
+<p style="font-size:11px;color:#94a3b8;margin-top:6px">Default: admin123 - change in code later</p>
 </div>
 
 <div id="dashboard" style="display:none">
 <div class="grid4">
 <div class="card stat"><h2 id="totalTenants">0</h2><p>Total Dukaz (Tenants)</p><small id="totalRevenue" style="color:#10b981;font-weight:800">Ksh 0 / month</small></div>
 <div class="card stat"><h2 id="totalProducts">0</h2><p>Total Products</p><small>Across all tenants</small></div>
-<div class="card stat"><h2 id="totalSales">0</h2><p>Total Sales Records</p><small>Cloud synced</small></div>
+<div class="card stat"><h2 id="totalSales">0</h2><p>Total Sales</p><small>Today</small></div>
 <div class="card stat"><h2 id="countyCount">0</h2><p>Counties Covered</p><small id="countyList" style="font-size:10px">-</small></div>
 </div>
 
 <div class="card">
 <div style="display:flex;justify-content:space-between;align-items:center">
 <h3>All Tenants (Dukaz) - Multitenant View</h3>
-<button class="btn btn-sm btn-accent" onclick="loadData()">🔄 Refresh Data</button>
+<button class="btn btn-sm" onclick="loadData()">🔄 Refresh</button>
 </div>
 <input id="search" class="input" placeholder="Search shop, county, phone..." style="margin:12px 0" oninput="filterTenants()">
-<div style="overflow-x:auto;">
 <table class="table">
 <thead><tr><th>Tenant ID</th><th>Shop Name</th><th>County</th><th>Phone</th><th>Plan</th><th>Action</th></tr></thead>
 <tbody id="tenantBody"><tr><td colspan="6">Loading from Supabase...</td></tr></tbody>
 </table>
 </div>
-</div>
 
 <div class="card">
 <h3>Sales By Tenant (Live from Supabase)</h3>
-<div style="overflow-x:auto;">
 <table class="table">
-<thead><tr><th>Tenant</th><th>Product</th><th>Qty</th><th>Amount</th><th>Date</th></tr></thead>
-<tbody id="salesBody"><tr><td colspan="5">Loading sales...</td></tr></tbody>
+<thead><tr><th>Tenant</th><th>Product</th><th>Amount</th><th>Date</th></tr></thead>
+<tbody id="salesBody"><tr><td colspan="4">Loading sales...</td></tr></tbody>
 </table>
-</div>
 </div>
 
 <div class="card" style="background:#0f172a;color:white">
@@ -83,17 +79,15 @@ let allTenants = [];
 
 function loginAdmin(){
   if(document.getElementById('adminPass').value !== 'admin123') return alert('Wrong password');
-  document.getElementById('loginCard').style.display='none';
   document.getElementById('dashboard').style.display='block';
   loadData();
 }
 
 async function loadData(){
   document.getElementById('conn').innerText='LOADING...';
-  
   let {data: tenants} = await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(500);
   let {data: products} = await client.from('products').select('id, tenant_id').limit(1000);
-  let {data: sales} = await client.from('sales').select('*').order('created_at',{ascending:false}).limit(100);
+  let {data: sales} = await client.from('sales').select('*').order('created_at',{ascending:false}).limit(200);
   
   allTenants = tenants || [];
   document.getElementById('totalTenants').innerText = allTenants.length;
@@ -102,16 +96,16 @@ async function loadData(){
   
   let counties = [...new Set(allTenants.map(t=>t.county).filter(Boolean))];
   document.getElementById('countyCount').innerText = counties.length;
-  document.getElementById('countyList').innerText = counties.join(', ') || 'No counties yet';
+  document.getElementById('countyList').innerText = counties.join(', ') || 'Mwea only so far';
   
-  // Revenue Calculation
+  // Revenue
   let monthly = allTenants.length * 300;
   document.getElementById('totalRevenue').innerText = `Ksh ${monthly.toLocaleString()} / month potential`;
   let calc = `Current: ${allTenants.length} dukas x Ksh 300 = Ksh ${monthly.toLocaleString()}/mo\n`;
   calc += `Projected 20 counties (70k dukas):\n70,000 x 300 = Ksh 21,000,000 / month\n`;
   calc += `Per county breakdown:\n`;
   let byCounty = {};
-  allTenants.forEach(t=>{ if(t.county) byCounty[t.county] = (byCounty[t.county]||0)+1 });
+  allTenants.forEach(t=>{ byCounty[t.county] = (byCounty[t.county]||0)+1 });
   Object.keys(byCounty).forEach(c=>{ calc += `${c}: ${byCounty[c]} dukas = Ksh ${(byCounty[c]*300).toLocaleString()}\n` });
   document.getElementById('revenueCalc').innerText = calc;
   
@@ -129,28 +123,22 @@ function renderTenants(list){
       <td>${t.owner_phone||'-'}</td>
       <td>${t.plan||'monthly'}</td>
       <td><button class="btn btn-danger" style="padding:4px 8px;font-size:11px" onclick="deleteTenant('${t.id}')">Delete</button></td>
-    </tr>`).join('') || '<tr><td colspan="6">No tenants registered yet.</td></tr>';
+    </tr>`).join('') || '<tr><td colspan="6">No tenants yet. Create one in main app.</td></tr>';
 }
 
 function renderSales(sales){
   document.getElementById('salesBody').innerHTML = sales.map(s=>`
-    <tr>
-      <td><span class="badge">${s.tenant_id}</span></td>
-      <td><b>${s.product_name||'Item'}</b></td>
-      <td>${s.qty || 1}</td>
-      <td><b>Ksh ${s.total}</b></td>
-      <td><small>${new Date(s.created_at).toLocaleString()}</small></td>
-    </tr>`).join('') || '<tr><td colspan="5">No sales recorded yet</td></tr>';
+    <tr><td><span class="badge">${s.tenant_id}</span></td><td>${s.product_name||s.product_id}</td><td>Ksh ${s.total}</td><td>${new Date(s.created_at).toLocaleString()}</td></tr>`).join('') || '<tr><td colspan="4">No sales yet</td></tr>';
 }
 
 function filterTenants(){
   let q = document.getElementById('search').value.toLowerCase();
-  let filtered = allTenants.filter(t=> (t.id + (t.shop_name||'') + (t.county||'') + (t.owner_phone||'')).toLowerCase().includes(q));
+  let filtered = allTenants.filter(t=> (t.id+t.shop_name+t.county+t.owner_phone).toLowerCase().includes(q));
   renderTenants(filtered);
 }
 
 async function deleteTenant(id){
-  if(!confirm(`Delete tenant ${id}? This will remove store records.`)) return;
+  if(!confirm(`Delete tenant ${id}? This will delete his duka data.`)) return;
   await client.from('tenants').delete().eq('id',id);
   await client.from('products').delete().eq('tenant_id',id);
   await client.from('sales').delete().eq('tenant_id',id);
