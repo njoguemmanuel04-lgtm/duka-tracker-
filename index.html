@@ -173,6 +173,11 @@ let TENANT=params.get('tenant')||localStorage.getItem('duka_tenant')||'mwea-001'
 localStorage.setItem('duka_tenant',TENANT);
 document.getElementById('tenantIdShow').innerText=TENANT;
 
+// IMMEDIATE OFFLINE BLOCK CHECK: If previously blocked locally, lock down instantly
+if(localStorage.getItem('duka_blocked_'+TENANT) === 'true') {
+  document.body.innerHTML='<div style="padding:40px 20px;text-align:center;font-family:system-ui"><h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">⛔ Shop Blocked</h2><p style="color:#475569;font-size:14px">Contact Admin. Your subscription expired.</p><p style="color:#475569;font-size:14px;margin-top:4px">Pay Ksh 300 to reactivate.</p></div>';
+}
+
 let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
 let sales=JSON.parse(localStorage.getItem('duka_sales_'+TENANT)||'[]');
 let matumizi=JSON.parse(localStorage.getItem('duka_matumizi_'+TENANT)||'[]');
@@ -463,7 +468,15 @@ async function loadShop(){
  document.getElementById('shopName').innerText='Loading...';
  let {data}=await client.from('tenants').select('*').eq('id',TENANT).single();
  if(data){
-   if(data.is_active===false){ document.body.innerHTML='<div style="padding:30px;text-align:center"><h2>⛔ Shop Blocked</h2><p>Contact Admin. Your subscription expired.</p><p>Pay Ksh 300 to reactivate.</p></div>'; return; }
+   if(data.is_active===false){ 
+     // Save blocked status locally so it stays locked even if offline next time
+     localStorage.setItem('duka_blocked_'+TENANT, 'true');
+     document.body.innerHTML='<div style="padding:40px 20px;text-align:center;font-family:system-ui"><h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">⛔ Shop Blocked</h2><p style="color:#475569;font-size:14px">Contact Admin. Your subscription expired.</p><p style="color:#475569;font-size:14px;margin-top:4px">Pay Ksh 300 to reactivate.</p></div>'; 
+     return; 
+   } else {
+     // Clear block status if active is true
+     localStorage.setItem('duka_blocked_'+TENANT, 'false');
+   }
    document.getElementById('shopName').innerText=data.shop_name+' • '+data.county;
  } else {
    document.getElementById('shopName').innerText=TENANT;
@@ -509,7 +522,7 @@ function renderAll(){
 
  document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${sanitize(p.name)} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
  document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${sanitize(s.customer||'')}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
- document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
+ document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge ${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
  
  document.getElementById('stockList').innerHTML=products.length?products.map(p=>{
    let isLowStock = p.stock <= 5 && p.stock > 0;
@@ -529,7 +542,7 @@ function renderAll(){
  updateProductDropdown();
 }
 
-window.addEventListener('online',()=>{document.getElementById('syncStatus').innerText='🟢 Online'; trySync();});
+window.addEventListener('online',()=>{document.getElementById('syncStatus').innerText='🟢 Online'; trySync(); loadShop();});
 window.addEventListener('offline',()=>{document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';});
 if(!navigator.onLine) document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';
 
