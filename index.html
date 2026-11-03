@@ -510,7 +510,19 @@ function renderAll(){
  document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${sanitize(p.name)} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
  document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${sanitize(s.customer||'')}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
  document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
- document.getElementById('stockList').innerHTML=products.length?products.map(p=>`<div class="row"><div><b>${sanitize(p.name)}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right"><b>Stock: ${p.stock}</b><br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`).join(''):'<p class="small">No products. Add your first product above.</p>';
+ 
+ document.getElementById('stockList').innerHTML=products.length?products.map(p=>{
+   let isLowStock = p.stock <= 5 && p.stock > 0;
+   let isOutOfStock = p.stock <= 0;
+   let stockBadge = isOutOfStock 
+     ? `<span class="badge badge-red">OUT OF STOCK</span>` 
+     : isLowStock 
+     ? `<span class="badge badge-orange">⚠️ Low Stock (${p.stock})</span>` 
+     : `<b>Stock: ${p.stock}</b>`;
+
+   return `<div class="row"><div><b>${sanitize(p.name)}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right">${stockBadge}<br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`;
+ }).join(''):'<p class="small">No products. Add your first product above.</p>';
+
  document.getElementById('mkopoList').innerHTML=sales.filter(s=>!s.is_paid).length?sales.filter(s=>!s.is_paid).map(s=>`<div class="row"><div><b>${sanitize(s.customer||'Customer')}</b><br><span class="small">${sanitize(s.product_name)} x${s.qty} • ${new Date(s.created_at).toLocaleDateString()}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><button class="btn btn-green" style="padding:6px 10px;width:auto;margin-top:4px" onclick="markPaid('${s.id}')">Mark Paid</button></div></div>`).join(''):'<p class="small">No active debts 🎉</p>';
  document.getElementById('matumiziList').innerHTML=todayMat.length?todayMat.map(m=>`<div class="row"><div><b>${sanitize(m.desc)}</b><br><span class="small">${new Date(m.created_at).toLocaleTimeString()}</span></div><b>Ksh ${m.amount}</b></div>`).join(''):'<p class="small">No matumizi today</p>';
 
