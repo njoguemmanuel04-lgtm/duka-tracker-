@@ -43,6 +43,14 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat"><h2 id="mkopoTotal">Ksh 0</h2><p>Mkopo Unpaid</p></div>
 <div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
 </div>
+
+<div class="grid4">
+<div class="card stat" style="border-left:4px solid #f59e0b"><h2 id="salesYesterday">Ksh 0</h2><p>YESTERDAY</p><small id="ordersYesterday"></small></div>
+<div class="card stat" style="border-left:4px solid #2563eb"><h2 id="salesWeek">Ksh 0</h2><p>THIS WEEK</p><small id="ordersWeek"></small></div>
+<div class="card stat" style="border-left:4px solid #9333ea"><h2 id="salesMonth">Ksh 0</h2><p>THIS MONTH</p><small id="ordersMonth"></small></div>
+<div class="card stat" style="border-left:4px solid #10b981"><h2 id="profitMonth">Ksh 0</h2><p>PROFIT THIS MONTH</p></div>
+</div>
+
 <div class="card"><h3>Quick Sell</h3><p class="small">Tap a product to sell fast</p><div id="quickSell" style="margin-top:10px"></div></div>
 <div class="card"><h3>Today's Sales</h3><div id="todayList"></div></div>
 </div>
@@ -200,7 +208,6 @@ async function loadShop(){
  } else {
    document.getElementById('shopName').innerText=TENANT;
  }
- // Load cloud sales if online (merge, don't duplicate)
  let {data:salesCloud}=await client.from('sales').select('*').eq('tenant_id',TENANT).order('created_at',{ascending:false}).limit(200);
  if(salesCloud && salesCloud.length){
    let ids=new Set(sales.map(s=>s.id));
@@ -218,6 +225,27 @@ function renderAll(){
  document.getElementById('profitToday').innerText='Ksh '+Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0)).toLocaleString();
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
+
+ // YESTERDAY / WEEK / MONTH
+ let now=new Date();
+ let yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
+ let yStr=yesterday.toDateString();
+ let ySales=sales.filter(s=>new Date(s.created_at).toDateString()==yStr);
+ document.getElementById('salesYesterday').innerText='Ksh '+ySales.reduce((a,b)=>a+b.total,0).toLocaleString();
+ document.getElementById('ordersYesterday').innerText=ySales.length+' orders';
+
+ let dayOfWeek=now.getDay()==0?6:now.getDay()-1;
+ let weekStart=new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate()-dayOfWeek);
+ let weekSales=sales.filter(s=>new Date(s.created_at)>=weekStart);
+ document.getElementById('salesWeek').innerText='Ksh '+weekSales.reduce((a,b)=>a+b.total,0).toLocaleString();
+ document.getElementById('ordersWeek').innerText=weekSales.length+' orders this week';
+
+ let monthStart=new Date(now.getFullYear(), now.getMonth(), 1);
+ let monthSales=sales.filter(s=>new Date(s.created_at)>=monthStart);
+ document.getElementById('salesMonth').innerText='Ksh '+monthSales.reduce((a,b)=>a+b.total,0).toLocaleString();
+ document.getElementById('ordersMonth').innerText=monthSales.length+' orders this month';
+ let monthMat=matumizi.filter(m=>new Date(m.created_at)>=monthStart);
+ document.getElementById('profitMonth').innerText='Ksh '+Math.floor(monthSales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-monthMat.reduce((a,b)=>a+b.amount,0)).toLocaleString();
 
  document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${p.name} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
  document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${s.product_name}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${s.customer||''}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
