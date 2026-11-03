@@ -44,6 +44,7 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
 </div>
 
+<!-- Yesterday, Week, Month Analytics Cards Added Back -->
 <div class="grid4">
 <div class="card stat" style="border-left:4px solid #f59e0b"><h2 id="salesYesterday">Ksh 0</h2><p>YESTERDAY</p><small id="ordersYesterday"></small></div>
 <div class="card stat" style="border-left:4px solid #2563eb"><h2 id="salesWeek">Ksh 0</h2><p>THIS WEEK</p><small id="ordersWeek"></small></div>
@@ -176,14 +177,11 @@ document.getElementById('tenantIdShow').innerText=TENANT;
 // IMMEDIATE OFFLINE CHECKS
 const nowTs = Date.now();
 const lastCheckTs = localStorage.getItem('duka_last_check_' + TENANT);
-const GRACE_PERIOD = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+const GRACE_PERIOD = 7 * 24 * 60 * 60 * 1000;
 
-// Check 1: If previously blocked from cloud, lock immediately
 if(localStorage.getItem('duka_blocked_' + TENANT) === 'true') {
   renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
-} 
-// Check 2: If offline for more than 7 days without cloud check-in, trigger expiration lock
-else if (!navigator.onLine && lastCheckTs && (nowTs - parseInt(lastCheckTs) > GRACE_PERIOD)) {
+} else if (!navigator.onLine && lastCheckTs && (nowTs - parseInt(lastCheckTs) > GRACE_PERIOD)) {
   renderBlockedScreen("⚠️ Connection Required", "Your 7-day offline grace period has expired.", "Please connect to the internet to verify subscription.");
 }
 
@@ -492,7 +490,6 @@ async function loadShop(){
        renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
        return; 
      } else {
-       // Online Check Passed: Refresh 7-day Grace Period timer & clear local block
        localStorage.setItem('duka_blocked_'+TENANT, 'false');
        localStorage.setItem('duka_last_check_'+TENANT, Date.now().toString());
      }
