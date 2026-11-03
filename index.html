@@ -57,14 +57,64 @@ body{background:#f8fafc;padding-bottom:80px}
 
 <!-- SELL -->
 <div id="page-sell" class="page">
-<div class="card"><h3>🛒 Sell Product</h3>
-<select id="sellProduct" class="select"></select>
-<input id="sellQty" type="number" class="input" value="1" min="1" placeholder="Quantity">
-<select id="sellPayment" class="select"><option>Cash</option><option>M-Pesa</option><option>Debt</option></select>
-<input id="sellCustomer" class="input" placeholder="Customer name (for Debt only)">
-<button class="btn btn-green" onclick="doSell()">Sell Now</button>
-</div>
-<div class="card"><h3>All Sales</h3><div id="allSalesList"></div></div>
+  <div class="card">
+    <h3>🛒 POS Terminal</h3>
+    <p class="small">Add products to cart to process multi-item sales</p>
+    
+    <div style="display: flex; gap: 8px; margin-top: 10px;">
+      <select id="sellProduct" class="select" style="flex: 2; margin-bottom: 0;"></select>
+      <input id="sellQty" type="number" class="input" value="1" min="1" placeholder="Qty" style="flex: 1; margin-bottom: 0;">
+      <button class="btn btn-green" onclick="addToCart()" style="width: auto; padding: 0 16px;">+ Add</button>
+    </div>
+
+    <!-- Active Cart Table -->
+    <div id="cartSection" style="margin-top: 14px; display: none;">
+      <div style="font-weight: 800; font-size: 13px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+        Current Cart
+      </div>
+      <div id="cartItemsList"></div>
+      
+      <div class="row" style="border-top: 2px dashed #cbd5e1; margin-top: 8px; padding-top: 8px; font-weight: 800; font-size: 16px;">
+        <span>Total Payable:</span>
+        <span id="cartTotalText" style="color: #10b981;">Ksh 0</span>
+      </div>
+
+      <!-- Payment Configuration -->
+      <div style="margin-top: 10px;">
+        <label class="small" style="font-weight: 700;">Payment Method</label>
+        <select id="sellPayment" class="select" onchange="togglePaymentFields()">
+          <option value="Cash">Cash</option>
+          <option value="M-Pesa">M-Pesa</option>
+          <option value="Debt">Debt (Mkopo)</option>
+        </select>
+      </div>
+
+      <!-- Dynamic Payment Fields -->
+      <div id="cashFields" style="margin-top: 4px;">
+        <input id="cashReceived" type="number" class="input" placeholder="Amount Given by Customer (e.g. 500)" oninput="calculateChange()">
+        <div id="changeDueText" class="small" style="font-weight: 800; color: #2563eb; margin-bottom: 8px;">Change Due: Ksh 0</div>
+      </div>
+
+      <div id="mpesaFields" style="display: none; margin-top: 4px;">
+        <input id="mpesaRef" class="input" placeholder="M-Pesa Reference / Phone (Optional)">
+      </div>
+
+      <div id="debtFields" style="display: none; margin-top: 4px;">
+        <input id="sellCustomer" class="input" placeholder="Customer Full Name (Required)">
+        <input id="sellPhone" class="input" placeholder="Customer Phone Number (Optional)">
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn btn-red" onclick="clearCart()" style="flex: 1; background: #94a3b8;">Clear Cart</button>
+        <button class="btn btn-green" onclick="checkoutCart()" style="flex: 2; font-size: 15px;">Complete Sale</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Transactions</h3>
+    <div id="allSalesList"></div>
+  </div>
 </div>
 
 <!-- INVENTORY -->
@@ -94,6 +144,18 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card"><h3>Today's Matumizi</h3><div id="matumiziList"></div></div>
 </div>
 
+<!-- Receipt Modal -->
+<div id="receiptModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:100%; max-width:360px; border-radius:16px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div style="text-align:center; margin-bottom:12px;">
+      <h2 style="font-size:18px; color:#0f172a;">Receipt Completed!</h2>
+      <p class="small" id="receiptDate"></p>
+    </div>
+    <div id="receiptDetails" style="border-top:1px dashed #ccc; border-bottom:1px dashed #ccc; padding:10px 0; margin-bottom:12px; font-size:13px;"></div>
+    <button class="btn btn-green" onclick="closeReceiptModal()">Done / Next Sale</button>
+  </div>
+</div>
+
 <div class="tabs">
 <button id="tab-home" class="active" onclick="showPage('home')">🏠<br>Home</button>
 <button id="tab-sell" onclick="showPage('sell')">🛒<br>Sell</button>
@@ -115,6 +177,7 @@ let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
 let sales=JSON.parse(localStorage.getItem('duka_sales_'+TENANT)||'[]');
 let matumizi=JSON.parse(localStorage.getItem('duka_matumizi_'+TENANT)||'[]');
 let pending=JSON.parse(localStorage.getItem('duka_pending_'+TENANT)||'[]');
+let currentCart=[];
 
 function saveLocal(){
  localStorage.setItem('duka_products_'+TENANT,JSON.stringify(products));
@@ -123,6 +186,7 @@ function saveLocal(){
  localStorage.setItem('duka_pending_'+TENANT,JSON.stringify(pending));
  document.getElementById('pendingCount').innerText=pending.length?pending.length+' pending • will sync':''; 
 }
+
 function showPage(p){
  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
  document.querySelectorAll('.tabs button').forEach(e=>e.classList.remove('active'));
@@ -130,6 +194,208 @@ function showPage(p){
  document.getElementById('tab-'+p).classList.add('active');
  renderAll();
 }
+
+function sanitize(str) {
+  return str ? String(str).replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[tag] || tag)) : '';
+}
+
+function updateProductDropdown() {
+  const select = document.getElementById('sellProduct');
+  if (!products.length) {
+    select.innerHTML = '<option value="">No products available</option>';
+    return;
+  }
+  select.innerHTML = products.map(p => `
+    <option value="${p.id}" ${p.stock <= 0 ? 'disabled' : ''}>
+      ${sanitize(p.name)} - Ksh ${p.price} ${p.stock <= 0 ? '(OUT OF STOCK)' : `(Stock: ${p.stock})`}
+    </option>
+  `).join('');
+}
+
+function addToCart() {
+  const pid = document.getElementById('sellProduct').value;
+  const qty = parseInt(document.getElementById('sellQty').value || 1);
+  const prod = products.find(p => String(p.id) === String(pid));
+
+  if (!prod) return alert('Select a valid product');
+  if (qty <= 0) return alert('Quantity must be greater than zero');
+  
+  const cartItem = currentCart.find(item => String(item.id) === String(pid));
+  const currentInCartQty = cartItem ? cartItem.qty : 0;
+
+  if ((currentInCartQty + qty) > prod.stock) {
+    return alert(`Cannot add more than available stock! Available: ${prod.stock - currentInCartQty}`);
+  }
+
+  if (cartItem) {
+    cartItem.qty += qty;
+    cartItem.total = cartItem.qty * cartItem.price;
+    cartItem.costTotal = cartItem.qty * cartItem.cost;
+  } else {
+    currentCart.push({
+      id: prod.id,
+      name: prod.name,
+      price: prod.price,
+      cost: prod.cost,
+      qty: qty,
+      total: prod.price * qty,
+      costTotal: prod.cost * qty
+    });
+  }
+
+  document.getElementById('sellQty').value = 1;
+  renderCart();
+}
+
+function renderCart() {
+  const cartSec = document.getElementById('cartSection');
+  const cartList = document.getElementById('cartItemsList');
+  
+  if (currentCart.length === 0) {
+    cartSec.style.display = 'none';
+    return;
+  }
+
+  cartSec.style.display = 'block';
+  let grandTotal = 0;
+
+  cartList.innerHTML = currentCart.map((item, index) => {
+    grandTotal += item.total;
+    return `
+      <div class="row" style="padding:6px 0;">
+        <div>
+          <b>${sanitize(item.name)}</b><br>
+          <span class="small">Ksh ${item.price} × ${item.qty}</span>
+        </div>
+        <div style="text-align:right;">
+          <b>Ksh ${item.total}</b><br>
+          <button onclick="removeFromCart(${index})" style="background:none; border:none; color:#ef4444; font-size:11px; font-weight:800; cursor:pointer;">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('cartTotalText').innerText = 'Ksh ' + grandTotal.toLocaleString();
+  calculateChange();
+}
+
+function removeFromCart(index) {
+  currentCart.splice(index, 1);
+  renderCart();
+}
+
+function clearCart() {
+  currentCart = [];
+  renderCart();
+}
+
+function togglePaymentFields() {
+  const method = document.getElementById('sellPayment').value;
+  document.getElementById('cashFields').style.display = method === 'Cash' ? 'block' : 'none';
+  document.getElementById('mpesaFields').style.display = method === 'M-Pesa' ? 'block' : 'none';
+  document.getElementById('debtFields').style.display = method === 'Debt' ? 'block' : 'none';
+}
+
+function calculateChange() {
+  const grandTotal = currentCart.reduce((sum, item) => sum + item.total, 0);
+  const given = parseFloat(document.getElementById('cashReceived').value || 0);
+  const change = given - grandTotal;
+  const changeEl = document.getElementById('changeDueText');
+
+  if (given > 0) {
+    changeEl.innerText = change >= 0 ? `Change Due: Ksh ${change.toLocaleString()}` : `Underpaid by: Ksh ${Math.abs(change).toLocaleString()}`;
+    changeEl.style.color = change >= 0 ? '#2563eb' : '#ef4444';
+  } else {
+    changeEl.innerText = 'Change Due: Ksh 0';
+    changeEl.style.color = '#2563eb';
+  }
+}
+
+async function checkoutCart() {
+  if (currentCart.length === 0) return alert('Cart is empty');
+
+  const payMethod = document.getElementById('sellPayment').value;
+  const customerName = sanitize(document.getElementById('sellCustomer').value.trim());
+  const customerPhone = sanitize(document.getElementById('sellPhone').value.trim());
+  const mpesaRef = sanitize(document.getElementById('mpesaRef').value.trim());
+
+  if (payMethod === 'Debt' && !customerName) {
+    return alert('Customer name is strictly required for Debt (Mkopo) sales.');
+  }
+
+  const batchId = 'TX-' + crypto.randomUUID().slice(0, 8).toUpperCase();
+  const timestamp = new Date().toISOString();
+  let createdSales = [];
+
+  for (let item of currentCart) {
+    let p = products.find(prod => String(prod.id) === String(item.id));
+    if (p) p.stock -= item.qty;
+
+    let saleEntry = {
+      id: crypto.randomUUID(),
+      batch_id: batchId,
+      product_name: item.name,
+      qty: item.qty,
+      total: item.total,
+      cost: item.costTotal,
+      payment: payMethod,
+      customer: customerName ? `${customerName} ${customerPhone ? '(' + customerPhone + ')' : ''}` : (mpesaRef ? `Ref: ${mpesaRef}` : ''),
+      is_paid: payMethod !== 'Debt',
+      created_at: timestamp,
+      tenant_id: TENANT
+    };
+
+    sales.unshift(saleEntry);
+    pending.push(saleEntry);
+    createdSales.push(saleEntry);
+  }
+
+  saveLocal();
+  renderAll();
+  trySync();
+  
+  showReceiptModal(createdSales, payMethod);
+  clearCart();
+  
+  document.getElementById('cashReceived').value = '';
+  document.getElementById('sellCustomer').value = '';
+  document.getElementById('sellPhone').value = '';
+  document.getElementById('mpesaRef').value = '';
+}
+
+function showReceiptModal(saleEntries, payment) {
+  const modal = document.getElementById('receiptModal');
+  const dateEl = document.getElementById('receiptDate');
+  const detailsEl = document.getElementById('receiptDetails');
+
+  dateEl.innerText = new Date().toLocaleString();
+
+  let totalAmount = 0;
+  let summaryHtml = saleEntries.map(s => {
+    totalAmount += s.total;
+    return `<div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+      <span>${sanitize(s.product_name)} x${s.qty}</span>
+      <b>Ksh ${s.total}</b>
+    </div>`;
+  }).join('');
+
+  summaryHtml += `
+    <div style="border-top:1px solid #e2e8f0; margin-top:8px; padding-top:6px; display:flex; justify-content:space-between; font-weight:800;">
+      <span>Total Paid (${payment})</span>
+      <span style="color:#10b981;">Ksh ${totalAmount.toLocaleString()}</span>
+    </div>
+  `;
+
+  detailsEl.innerHTML = summaryHtml;
+  modal.style.display = 'flex';
+}
+
+function closeReceiptModal() {
+  document.getElementById('receiptModal').style.display = 'none';
+}
+
 function addSample(){
  if(products.length>0) return alert('You already have products');
  products=[
@@ -141,6 +407,7 @@ function addSample(){
  ];
  saveLocal(); renderAll(); alert('Sample products added! Edit or delete them.');
 }
+
 function addProduct(){
  let n=document.getElementById('pName').value.trim();
  let pr=parseFloat(document.getElementById('pPrice').value);
@@ -151,6 +418,7 @@ function addProduct(){
  ['pName','pPrice','pCost','pStock'].forEach(i=>document.getElementById(i).value='');
  saveLocal(); renderAll(); showPage('stock');
 }
+
 function addMatumizi(){
  let d=document.getElementById('mDesc').value.trim();
  let a=parseFloat(document.getElementById('mAmount').value);
@@ -159,22 +427,7 @@ function addMatumizi(){
  document.getElementById('mDesc').value=''; document.getElementById('mAmount').value='';
  saveLocal(); renderAll(); alert('Matumizi saved');
 }
-async function doSell(){
- let pid=document.getElementById('sellProduct').value;
- let qty=parseInt(document.getElementById('sellQty').value||1);
- let pay=document.getElementById('sellPayment').value;
- let cust=document.getElementById('sellCustomer').value.trim();
- let prod=products.find(p=>String(p.id)==String(pid));
- if(!prod) return alert('Add product first in Stock');
- if(prod.stock<qty) return alert('Not enough stock! Stock: '+prod.stock);
- if(pay=='Debt' && !cust) return alert('Enter customer name for Debt');
- prod.stock-=qty;
- let total=prod.price*qty; let cost=prod.cost*qty;
- let sale={id:Date.now(),product_name:prod.name,qty,total,cost,payment:pay,customer:cust||'',is_paid:pay!=='Debt',created_at:new Date().toISOString(),tenant_id:TENANT};
- sales.unshift(sale); pending.push(sale);
- saveLocal(); renderAll(); trySync();
- alert(`Sold ${prod.name} x${qty} = Ksh ${total} (${pay})`);
-}
+
 function quickSellById(id){
  let p=products.find(x=>String(x.id)==String(id));
  if(!p) return;
@@ -182,10 +435,12 @@ function quickSellById(id){
  document.getElementById('sellQty').value=1;
  showPage('sell');
 }
+
 function markPaid(id){
  let s=sales.find(x=>x.id==id); if(!s) return;
  s.is_paid=true; s.payment='Cash'; saveLocal(); renderAll(); alert('Marked as Paid');
 }
+
 function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
 function addStock(id){ let q=prompt('Add how many?','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseInt(q); saveLocal(); renderAll(); }
 
@@ -199,6 +454,7 @@ async function trySync(){
  }
  saveLocal();
 }
+
 async function loadShop(){
  document.getElementById('shopName').innerText='Loading...';
  let {data}=await client.from('tenants').select('*').eq('id',TENANT).single();
@@ -216,6 +472,7 @@ async function loadShop(){
    saveLocal(); renderAll();
  }
 }
+
 function renderAll(){
  let todayStr=new Date().toDateString();
  let todaySales=sales.filter(s=>new Date(s.created_at).toDateString()==todayStr);
@@ -226,7 +483,6 @@ function renderAll(){
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
 
- // YESTERDAY / WEEK / MONTH
  let now=new Date();
  let yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
  let yStr=yesterday.toDateString();
@@ -247,18 +503,24 @@ function renderAll(){
  let monthMat=matumizi.filter(m=>new Date(m.created_at)>=monthStart);
  document.getElementById('profitMonth').innerText='Ksh '+Math.floor(monthSales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-monthMat.reduce((a,b)=>a+b.amount,0)).toLocaleString();
 
- document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${p.name} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
- document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${s.product_name}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${s.customer||''}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
- document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${s.product_name}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
- document.getElementById('stockList').innerHTML=products.length?products.map(p=>`<div class="row"><div><b>${p.name}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right"><b>Stock: ${p.stock}</b><br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`).join(''):'<p class="small">No products. Add your first product above.</p>';
- document.getElementById('sellProduct').innerHTML=products.map(p=>`<option value="${p.id}">${p.name} - Ksh ${p.price} (Stock ${p.stock})</option>`).join('')||'<option>No products - Add in Stock</option>';
- document.getElementById('mkopoList').innerHTML=sales.filter(s=>!s.is_paid).length?sales.filter(s=>!s.is_paid).map(s=>`<div class="row"><div><b>${s.customer||'Customer'}</b><br><span class="small">${s.product_name} x${s.qty} • ${new Date(s.created_at).toLocaleDateString()}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><button class="btn btn-green" style="padding:6px 10px;width:auto;margin-top:4px" onclick="markPaid(${s.id})">Mark Paid</button></div></div>`).join(''):'<p class="small">No active debts 🎉</p>';
- document.getElementById('matumiziList').innerHTML=todayMat.length?todayMat.map(m=>`<div class="row"><div><b>${m.desc}</b><br><span class="small">${new Date(m.created_at).toLocaleTimeString()}</span></div><b>Ksh ${m.amount}</b></div>`).join(''):'<p class="small">No matumizi today</p>';
+ document.getElementById('quickSell').innerHTML=products.length?products.map(p=>`<button class="btn" style="margin-bottom:6px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0" onclick="quickSellById(${p.id})">${sanitize(p.name)} - Ksh ${p.price} • Stock ${p.stock}</button>`).join(''):'<p class="small">No products yet. Go to Stock → Add Product or Add Sample Products</p>';
+ document.getElementById('todayList').innerHTML=todaySales.length?todaySales.slice(0,20).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleTimeString()} • ${sanitize(s.customer||'')}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><span class="badge ${s.payment=='M-Pesa'?'badge-green':s.payment=='Debt'?'badge-orange':''}">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales today yet</p>';
+ document.getElementById('allSalesList').innerHTML=sales.length?sales.slice(0,100).map(s=>`<div class="row"><div><b>${sanitize(s.product_name)}</b> x${s.qty}<br><span class="small">${new Date(s.created_at).toLocaleDateString()} ${new Date(s.created_at).toLocaleTimeString()}</span></div><div><b>Ksh ${s.total}</b><br><span class="badge">${s.payment}</span></div></div>`).join(''):'<p class="small">No sales yet</p>';
+ document.getElementById('stockList').innerHTML=products.length?products.map(p=>`<div class="row"><div><b>${sanitize(p.name)}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right"><b>Stock: ${p.stock}</b><br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`).join(''):'<p class="small">No products. Add your first product above.</p>';
+ document.getElementById('mkopoList').innerHTML=sales.filter(s=>!s.is_paid).length?sales.filter(s=>!s.is_paid).map(s=>`<div class="row"><div><b>${sanitize(s.customer||'Customer')}</b><br><span class="small">${sanitize(s.product_name)} x${s.qty} • ${new Date(s.created_at).toLocaleDateString()}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><button class="btn btn-green" style="padding:6px 10px;width:auto;margin-top:4px" onclick="markPaid('${s.id}')">Mark Paid</button></div></div>`).join(''):'<p class="small">No active debts 🎉</p>';
+ document.getElementById('matumiziList').innerHTML=todayMat.length?todayMat.map(m=>`<div class="row"><div><b>${sanitize(m.desc)}</b><br><span class="small">${new Date(m.created_at).toLocaleTimeString()}</span></div><b>Ksh ${m.amount}</b></div>`).join(''):'<p class="small">No matumizi today</p>';
+
+ updateProductDropdown();
 }
+
 window.addEventListener('online',()=>{document.getElementById('syncStatus').innerText='🟢 Online'; trySync();});
 window.addEventListener('offline',()=>{document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';});
 if(!navigator.onLine) document.getElementById('syncStatus').innerText='🔴 Offline - Sales saved in phone';
-saveLocal(); renderAll(); loadShop(); trySync();
+
+saveLocal(); 
+renderAll(); 
+loadShop(); 
+trySync();
 setInterval(trySync,10000);
 </script>
 </body>
