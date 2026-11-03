@@ -59,11 +59,11 @@ body{background:#f8fafc;padding-bottom:80px}
 <div id="page-sell" class="page">
   <div class="card">
     <h3>🛒 POS Terminal</h3>
-    <p class="small">Add products to cart to process multi-item sales</p>
+    <p class="small">Add products to cart (Supports decimals like 0.5kg)</p>
     
     <div style="display: flex; gap: 8px; margin-top: 10px;">
       <select id="sellProduct" class="select" style="flex: 2; margin-bottom: 0;"></select>
-      <input id="sellQty" type="number" class="input" value="1" min="1" placeholder="Qty" style="flex: 1; margin-bottom: 0;">
+      <input id="sellQty" type="number" step="0.5" min="0.1" class="input" value="1" placeholder="Qty" style="flex: 1; margin-bottom: 0;">
       <button class="btn btn-green" onclick="addToCart()" style="width: auto; padding: 0 16px;">+ Add</button>
     </div>
 
@@ -123,7 +123,7 @@ body{background:#f8fafc;padding-bottom:80px}
 <input id="pName" class="input" placeholder="Product name e.g Mkate">
 <input id="pPrice" type="number" class="input" placeholder="Selling Price e.g 60">
 <input id="pCost" type="number" class="input" placeholder="Buying Cost e.g 50">
-<input id="pStock" type="number" class="input" placeholder="Stock e.g 10">
+<input id="pStock" type="number" step="0.5" class="input" placeholder="Stock e.g 10 or 5.5">
 <button class="btn btn-green" onclick="addProduct()">Add Product</button>
 <button class="btn" style="margin-top:8px;background:#e0f2fe;color:#075985" onclick="addSample()">+ Add Sample Products (for new shop)</button>
 </div>
@@ -216,7 +216,7 @@ function updateProductDropdown() {
 
 function addToCart() {
   const pid = document.getElementById('sellProduct').value;
-  const qty = parseInt(document.getElementById('sellQty').value || 1);
+  const qty = parseFloat(document.getElementById('sellQty').value || 1);
   const prod = products.find(p => String(p.id) === String(pid));
 
   if (!prod) return alert('Select a valid product');
@@ -231,6 +231,7 @@ function addToCart() {
 
   if (cartItem) {
     cartItem.qty += qty;
+    cartItem.qty = Math.round(cartItem.qty * 100) / 100;
     cartItem.total = cartItem.qty * cartItem.price;
     cartItem.costTotal = cartItem.qty * cartItem.cost;
   } else {
@@ -240,8 +241,8 @@ function addToCart() {
       price: prod.price,
       cost: prod.cost,
       qty: qty,
-      total: prod.price * qty,
-      costTotal: prod.cost * qty
+      total: qty * prod.price,
+      costTotal: qty * prod.cost
     });
   }
 
@@ -331,7 +332,10 @@ async function checkoutCart() {
 
   for (let item of currentCart) {
     let p = products.find(prod => String(prod.id) === String(item.id));
-    if (p) p.stock -= item.qty;
+    if (p) {
+      p.stock -= item.qty;
+      p.stock = Math.round(p.stock * 100) / 100;
+    }
 
     let saleEntry = {
       id: crypto.randomUUID(),
@@ -412,7 +416,7 @@ function addProduct(){
  let n=document.getElementById('pName').value.trim();
  let pr=parseFloat(document.getElementById('pPrice').value);
  let c=parseFloat(document.getElementById('pCost').value||pr*0.83);
- let s=parseInt(document.getElementById('pStock').value||0);
+ let s=parseFloat(document.getElementById('pStock').value||0);
  if(!n||!pr) return alert('Fill name and price');
  products.push({id:Date.now(),name:n,price:pr,cost:c,stock:s});
  ['pName','pPrice','pCost','pStock'].forEach(i=>document.getElementById(i).value='');
@@ -442,7 +446,7 @@ function markPaid(id){
 }
 
 function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
-function addStock(id){ let q=prompt('Add how many?','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseInt(q); saveLocal(); renderAll(); }
+function addStock(id){ let q=prompt('Add how many? (e.g. 10 or 5.5)','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseFloat(q); saveLocal(); renderAll(); }
 
 async function trySync(){
  if(!navigator.onLine) return;
