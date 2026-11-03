@@ -55,7 +55,7 @@ body{background:#f8fafc;padding-bottom:80px}
 <!-- WhatsApp Report Feature -->
 <div class="card" style="background:#f8fafc; border:2px dashed #cbd5e1; text-align:center;">
   <h3 style="font-size:14px; margin-bottom:6px;">📊 Daily Shop Summary</h3>
-  <p class="small" style="margin-bottom:10px;">Send today's Sales, Profit & Matumizi to WhatsApp</p>
+  <p class="small" style="margin-bottom:10px;">Send itemized Sales, Cash, M-Pesa, Mkopo & Profit</p>
   <button class="btn btn-green" onclick="sendDailyWhatsAppReport()">📲 Send Daily Report via WhatsApp</button>
 </div>
 
@@ -465,7 +465,7 @@ function markPaid(id){
 function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
 function addStock(id){ let q=prompt('Add how many? (e.g. 10 or 5.5)','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseFloat(q); saveLocal(); renderAll(); }
 
-// Daily WhatsApp Report Function
+// Daily WhatsApp Report Function with Payment Breakdown
 function sendDailyWhatsAppReport() {
   let todayStr = new Date().toDateString();
   let todaySales = sales.filter(s => new Date(s.created_at).toDateString() == todayStr);
@@ -474,15 +474,23 @@ function sendDailyWhatsAppReport() {
   let totalSalesAmount = todaySales.reduce((a, b) => a + b.total, 0);
   let totalOrdersCount = todaySales.length;
   
+  let cashTotal = todaySales.filter(s => s.payment === 'Cash').reduce((a, b) => a + b.total, 0);
+  let mpesaTotal = todaySales.filter(s => s.payment === 'M-Pesa').reduce((a, b) => a + b.total, 0);
+  let mkopoTotal = todaySales.filter(s => s.payment === 'Debt').reduce((a, b) => a + b.total, 0);
+
   let totalCost = todaySales.reduce((a, b) => a + (b.cost || b.total * 0.83), 0);
   let totalMatAmount = todayMat.reduce((a, b) => a + b.amount, 0);
   let netProfit = Math.floor((totalSalesAmount - totalCost) - totalMatAmount);
 
   let reportText = `📊 *DUKA TRACKER - DAILY REPORT* 📊\n` +
                    `📅 Date: ${new Date().toLocaleDateString()}\n\n` +
-                   `🛒 *Sales Today:* Ksh ${totalSalesAmount.toLocaleString()} (${totalOrdersCount} orders)\n` +
-                   `💸 *Matumizi (Expenses):* Ksh ${totalMatAmount.toLocaleString()}\n` +
-                   `📈 *Net Profit Today:* Ksh ${netProfit.toLocaleString()}\n\n` +
+                   `🛒 *Total Sales:* Ksh ${totalSalesAmount.toLocaleString()} (${totalOrdersCount} orders)\n` +
+                   `💵 *Cash Received:* Ksh ${cashTotal.toLocaleString()}\n` +
+                   `📱 *M-Pesa Total:* Ksh ${mpesaTotal.toLocaleString()}\n` +
+                   `📖 *Mkopo (Debts):* Ksh ${mkopoTotal.toLocaleString()}\n` +
+                   `💸 *Expenses Today:* Ksh ${totalMatAmount.toLocaleString()}\n\n` +
+                   `-----------------------------------\n` +
+                   `📈 *NET PROFIT:* Ksh ${netProfit.toLocaleString()}\n\n` +
                    `Powered by Duka Tracker 🚀`;
 
   let encodedText = encodeURIComponent(reportText);
