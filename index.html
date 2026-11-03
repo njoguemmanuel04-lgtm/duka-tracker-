@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DukaPulse - Multitenant</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--primary:#0f172a;--accent:#10b981;--bg:#f8fafc}
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:var(--bg);padding-bottom:80px}
+.header{background:var(--primary);color:white;padding:14px 16px;display:flex;justify-content:space-between}
+.logo{font-weight:900;font-size:20px} .logo span{color:var(--accent)}
+.card{background:white;border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);margin:12px}
+.btn{background:var(--primary);color:white;border:none;padding:14px;border-radius:12px;font-weight:800;width:100%;cursor:pointer}
+.btn-accent{background:var(--accent)} .btn-sm{padding:8px 12px;width:auto;font-size:13px}
+.input{width:100%;padding:14px;border:1px solid #e2e8f0;border-radius:12px;font-size:15px}
+.badge{font-size:10px;padding:4px 8px;border-radius:20px;font-weight:800;background:#e2e8f0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tenant-bar{background:var(--accent);color:white;padding:8px 16px;font-size:12px;text-align:center;font-weight:700}
+</style>
+</head>
+<body>
+<div class="header"><div class="logo">Duka<span>Pulse</span></div><div style="font-size:11px"><span id="onlineDot">●</span> <span id="statusTxt">ONLINE</span> | <span id="queueTxt">0 pending</span></div></div>
+<div class="tenant-bar" id="tenantBar">TENANT: - </div>
+<div id="loginView" class="card" style="margin-top:30px">
+<h3>Enter Your Duka - Multitenant</h3>
+<p style="color:#64748b;font-size:13px;margin:8px 0">Each duka isolated. Connected to Supabase.</p>
+<input id="shopName" class="input" placeholder="e.g Mwea General Stores" style="margin:10px 0">
+<input id="county" class="input" placeholder="County e.g Embu" style="margin:10px 0">
+<input id="phone" class="input" placeholder="Phone e.g 0712345678">
+<button class="btn btn-accent" style="margin-top:14px" onclick="login()">Open My Register →</button>
+<p style="font-size:11px;color:#94a3b8;margin-top:10px">Your tenant_id: <span id="previewId">auto</span></p>
+</div>
+<div id="appView" style="display:none">
+<div class="card"><div style="display:flex;justify-content:space-between"><h4>Sell Product</h4><span class="badge" id="shopBadge"></span></div>
+<div style="margin-top:12px"><input id="prodName" class="input" placeholder="Product name"></div>
+<div class="grid2" style="margin-top:10px"><input id="prodPrice" type="number" class="input" placeholder="Price"><input id="prodStock" type="number" class="input" placeholder="Stock"></div>
+<button class="btn btn-accent" style="margin-top:12px" onclick="addProduct()">Add to Stock</button></div>
+<div class="card"><h4>My Stock (<span id="stockCount">0</span>) - Isolated</h4><div id="stockList" style="margin-top:10px"></div></div>
+<div class="card"><h4>Today Sales</h4><div id="salesList" style="margin-top:10px;font-size:13px">No sales</div><button class="btn" style="margin-top:12px" onclick="syncNow()">🔄 Force Sync</button></div>
+<div class="card" style="background:#0f172a;color:#10b981"><h4 style="color:white">Super Admin - All Tenants</h4><pre style="font-size:11px;white-space:pre-wrap;margin-top:10px" id="adminView">Connecting...</pre></div>
+</div>
+<script>
+const SUPABASE_URL = "https://mpwyzajhbzaabtdhqumj.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let tenantId = localStorage.getItem('dp_tenant_id') || '';
+let tenantData = JSON.parse(localStorage.getItem('dp_tenant_data') || 'null');
+let localDB = { products: JSON.parse(localStorage.getItem('dp_products')||'[]'), sales: JSON.parse(localStorage.getItem('dp_sales')||'[]'), queue: JSON.parse(localStorage.getItem('dp_queue')||'[]') };
+function preview(){ let name = document.getElementById('shopName').value || 'mwea'; let id = name.toLowerCase().replace(/\s+/g,'-').substring(0,12)+'-'+Math.floor(Math.random()*999); document.getElementById('previewId').innerText=id; return id; }
+document.getElementById('shopName')?.addEventListener('input',preview);
+function login(){
+  let shop = document.getElementById('shopName').value.trim() || 'Mwea Duka';
+  let countyVal = document.getElementById('county').value.trim() || 'Kirinyaga';
+  let phoneVal = document.getElementById('phone').value.trim() || '0712345678';
+  if(!tenantId) tenantId = preview();
+  tenantData = { shop_name: shop, county: countyVal, phone: phoneVal, tenant_id: tenantId };
+  localStorage.setItem('dp_tenant_id', tenantId);
+  localStorage.setItem('dp_tenant_data', JSON.stringify(tenantData));
+  showApp();
+  supabaseClient.from('tenants').upsert({id: tenantId, shop_name: shop, county: countyVal, owner_phone: phoneVal, plan: 'monthly'}).then(r=>console.log(r));
+}
+function showApp(){
+  if(!tenantData) return;
+  document.getElementById('loginView').style.display='none';
+  document.getElementById('appView').style.display='block';
+  document.getElementById('tenantBar').innerText = `TENANT: ${tenantId} | ${tenantData.county} | ${tenantData.shop_name}`;
+  document.getElementById('shopBadge').innerText = tenantData.shop_name;
+  renderProducts(); renderSales(); renderAdmin();
+}
+function saveLocal(){
+  localStorage.setItem('dp_products', JSON.stringify(localDB.products));
+  localStorage.setItem('dp_sales', JSON.stringify(localDB.sales));
+  localStorage.setItem('dp_queue', JSON.stringify(localDB.queue));
+}
+function addProduct(){
+  let name = document.getElementById('prodName').value.trim();
+  let price = parseInt(document.getElementById('prodPrice').value)||0;
+  let stock = parseInt(document.getElementById('prodStock').value)||0;
+  if(!name) return alert('Enter product');
+  let prod = { id: Date.now(), tenant_id: tenantId, name, price, stock };
+  localDB.products.unshift(prod);
+  localDB.queue.push({type:'product', data: prod});
+  saveLocal(); renderProducts();
+  document.getElementById('prodName').value=''; syncNow();
+}
+function sellProduct(id){
+  let prod = localDB.products.find(p=>p.id==id && p.tenant_id==tenantId);
+  if(!prod || prod.stock<=0) return;
+  prod.stock--;
+  let sale = { id: Date.now(), tenant_id: tenantId, product_id: prod.id, product_name: prod.name, total: prod.price, qty:1, created_at: new Date().toISOString() };
+  localDB.sales.unshift(sale);
+  localDB.queue.push({type:'sale', data: sale});
+  saveLocal(); renderProducts(); renderSales(); syncNow();
+}
+function renderProducts(){
+  let myProds = localDB.products.filter(p=>p.tenant_id==tenantId);
+  document.getElementById('stockCount').innerText=myProds.length;
+  document.getElementById('stockList').innerHTML = myProds.map(p=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid #f1f5f9;border-radius:10px;margin-bottom:8px">
+      <div><b>${p.name}</b><br><small>Ksh ${p.price} | Stock: ${p.stock}</small></div>
+      <button class="btn btn-sm btn-accent" onclick="sellProduct(${p.id})">Sell</button>
+    </div>`).join('') || '<small style="color:#94a3b8">No stock</small>';
+}
+function renderSales(){
+  let mySales = localDB.sales.filter(s=>s.tenant_id==tenantId);
+  document.getElementById('salesList').innerHTML = mySales.slice(0,10).map(s=>`• ${s.product_name} - Ksh ${s.total} - ${new Date(s.created_at).toLocaleTimeString()}`).join('<br>') || 'No sales yet';
+  document.getElementById('queueTxt').innerText = `${localDB.queue.length} pending`;
+}
+async function renderAdmin(){
+  let {data: tenants} = await supabaseClient.from('tenants').select('*').limit(100);
+  let txt = `TOTAL TENANTS: ${tenants ? tenants.length : 0}\n`;
+  if(tenants) txt += tenants.map(t=>`${t.id} | ${t.shop_name} | ${t.county}`).join('\n');
+  document.getElementById('adminView').innerText = txt;
+}
+async function syncNow(){
+  if(!navigator.onLine){ document.getElementById('statusTxt').innerText='OFFLINE'; return; }
+  document.getElementById('statusTxt').innerText='SYNCING...';
+  let queue = [...localDB.queue];
+  for(let item of queue){
+    try{
+      if(item.type=='product') await supabaseClient.from('products').upsert(item.data);
+      if(item.type=='sale') await supabaseClient.from('sales').insert(item.data);
+      localDB.queue = localDB.queue.filter(q=>q.data.id!=item.data.id);
+    }catch(e){ console.log(e); }
+  }
+  saveLocal(); renderSales(); renderAdmin();
+  document.getElementById('statusTxt').innerText='ONLINE ✓';
+}
+setInterval(()=>{ document.getElementById('onlineDot').style.color = navigator.onLine ? '#10b981':'#ef4444'; },2000);
+if(tenantData) showApp();
+</script>
+</body>
+</html>
