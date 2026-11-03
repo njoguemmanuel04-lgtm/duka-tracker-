@@ -1,0 +1,15 @@
+{
+  "name": "Duka Tracker",
+  "short_name": "Duka Tracker",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/263/263115.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
