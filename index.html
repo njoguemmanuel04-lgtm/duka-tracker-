@@ -44,7 +44,7 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
 </div>
 
-<!-- Yesterday, Week, Month Analytics Cards Added Back -->
+<!-- Analytics Cards -->
 <div class="grid4">
 <div class="card stat" style="border-left:4px solid #f59e0b"><h2 id="salesYesterday">Ksh 0</h2><p>YESTERDAY</p><small id="ordersYesterday"></small></div>
 <div class="card stat" style="border-left:4px solid #2563eb"><h2 id="salesWeek">Ksh 0</h2><p>THIS WEEK</p><small id="ordersWeek"></small></div>
@@ -490,7 +490,8 @@ async function loadShop(){
        renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
        return; 
      } else {
-       localStorage.setItem('duka_blocked_'+TENANT, 'false');
+       // AUTOMATICALLY UNBLOCK CACHE IF ACTIVE IN SUPABASE
+       localStorage.removeItem('duka_blocked_'+TENANT);
        localStorage.setItem('duka_last_check_'+TENANT, Date.now().toString());
      }
      document.getElementById('shopName').innerText=data.shop_name+' • '+data.county;
