@@ -62,10 +62,10 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat" style="border-left:4px solid #10b981"><h2 id="profitMonth">Ksh 0</h2><p>PROFIT THIS MONTH</p></div>
 </div>
 
-<!-- Permanent Inventory Capital (Cost) & Selling Value Cards -->
+<!-- Stock Net Worth Card -->
 <div class="grid4">
-<div class="card stat" style="border-left:4px solid #0284c7;"><h2 id="stockCostWorth">Ksh 0</h2><p>Stock Buying Cost</p></div>
-<div class="card stat" style="border-left:4px solid #10b981;"><h2 id="stockSellingWorth">Ksh 0</h2><p>Stock Selling Value</p></div>
+<div class="card stat" style="border-left:4px solid #0284c7;"><h2 id="stockNetWorth">Ksh 0</h2><p>Stock Net Worth (Cost)</p></div>
+<div class="card stat" style="opacity:0"></div>
 </div>
 
 <!-- WhatsApp Report Feature -->
@@ -705,12 +705,9 @@ function renderAll(){
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
 
- // Calculate Total Inventory Buying Cost & Selling Value
- let totalBuyingCost = products.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * parseFloat(p.stock || 0)), 0);
- let totalSellingValue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseFloat(p.stock || 0)), 0);
-
- document.getElementById('stockCostWorth').innerText = 'Ksh ' + Math.floor(totalBuyingCost).toLocaleString();
- document.getElementById('stockSellingWorth').innerText = 'Ksh ' + Math.floor(totalSellingValue).toLocaleString();
+ // Calculate Stock Net Worth (Cost)
+ let totalStockWorth = products.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * parseFloat(p.stock || 0)), 0);
+ document.getElementById('stockNetWorth').innerText = 'Ksh ' + Math.floor(totalStockWorth).toLocaleString();
 
  let now=new Date();
  let yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
