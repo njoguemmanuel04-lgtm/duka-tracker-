@@ -62,10 +62,10 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat" style="border-left:4px solid #10b981"><h2 id="profitMonth">Ksh 0</h2><p>PROFIT THIS MONTH</p></div>
 </div>
 
-<!-- Extra Stats Row: Stock Net Worth -->
+<!-- Permanent Inventory Capital (Cost) & Selling Value Cards -->
 <div class="grid4">
-<div class="card stat" style="border-left:4px solid #0284c7;"><h2 id="stockNetWorth">Ksh 0</h2><p>Stock Net Worth (Cost)</p></div>
-<div class="card stat" style="opacity:0"></div>
+<div class="card stat" style="border-left:4px solid #0284c7;"><h2 id="stockCostWorth">Ksh 0</h2><p>Stock Buying Cost</p></div>
+<div class="card stat" style="border-left:4px solid #10b981;"><h2 id="stockSellingWorth">Ksh 0</h2><p>Stock Selling Value</p></div>
 </div>
 
 <!-- WhatsApp Report Feature -->
@@ -180,59 +180,8 @@ body{background:#f8fafc;padding-bottom:80px}
   </div>
 </div>
 
-<!-- Subscription Modal (Popup for Upgrade Plans) -->
-<div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:200; align-items:center; justify-content:center; padding:16px;">
-  <div style="background:#fff; width:100%; max-width:400px; border-radius:20px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h3 style="font-size:18px; color:#0f172a;">🌟 Subscription Plans</h3>
-      <button onclick="closeSubscriptionModal()" style="background:none; border:none; font-size:18px; font-weight:800; cursor:pointer; color:#64748b;">✕</button>
-    </div>
-    <p class="small" style="margin-bottom:14px;">Select your preferred plan to renew or upgrade your shop access:</p>
-
-    <!-- MONTHLY PLAN -->
-    <div onclick="selectPlan('Monthly', 300)" id="plan-300" style="background:#f0fdf4; border:2px solid #10b981; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-      <div>
-        <b style="font-size:14px; color:#0f172a;">Monthly Pass</b><br>
-        <span class="small" style="color:#64748b;">Standard access per month</span>
-      </div>
-      <div style="text-align:right;">
-        <b style="font-size:15px; color:#10b981;">Ksh 300</b><br>
-        <span class="small" style="color:#64748b;">/ month</span>
-      </div>
-    </div>
-
-    <!-- YEARLY PLAN -->
-    <div onclick="selectPlan('Yearly', 2500)" id="plan-2500" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; position:relative;">
-      <span style="position:absolute; top:-10px; right:12px; background:#10b981; color:#fff; font-size:9px; font-weight:800; padding:2px 8px; border-radius:10px;">BEST VALUE</span>
-      <div>
-        <b style="font-size:14px; color:#0f172a;">Yearly Pass</b><br>
-        <span class="small" style="color:#166534;">Save Ksh 1,100 / year</span>
-      </div>
-      <div style="text-align:right;">
-        <b style="font-size:15px; color:#10b981;">Ksh 2,500</b><br>
-        <span class="small" style="color:#166534;">/ year</span>
-      </div>
-    </div>
-
-    <!-- LIFETIME PLAN -->
-    <div onclick="selectPlan('Lifetime', 5000)" id="plan-5000" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:16px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
-      <div>
-        <b style="font-size:14px; color:#0f172a;">Lifetime Pass 👑</b><br>
-        <span class="small" style="color:#64748b;">Pay once, unlimited forever</span>
-      </div>
-      <div style="text-align:right;">
-        <b style="font-size:15px; color:#10b981;">Ksh 5,000</b><br>
-        <span class="small" style="color:#64748b;">one-time</span>
-      </div>
-    </div>
-
-    <!-- ACTION BUTTON -->
-    <button class="btn btn-green" id="payBtn" onclick="contactAdminForPayment()" style="padding:14px; font-size:15px; margin-bottom:8px;">
-      📲 Activate Monthly (Ksh 300)
-    </button>
-    <p class="small" style="text-align:center; color:#94a3b8;">Shop ID: <b>${TENANT}</b></p>
-  </div>
-</div>
+<!-- Subscription Modal -->
+<div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:200; align-items:center; justify-content:center; padding:16px;"></div>
 
 <div class="tabs">
 <button id="tab-home" class="active" onclick="showPage('home')">🏠<br>Home</button>
@@ -255,7 +204,58 @@ let selectedPlanName = 'Monthly';
 let selectedPlanPrice = 300;
 
 function openSubscriptionModal() {
-  document.getElementById('subscriptionModal').style.display = 'flex';
+  let modalHtml = `
+    <div style="background:#fff; width:100%; max-width:400px; border-radius:20px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.3); max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:18px; color:#0f172a;">🌟 Subscription Plans</h3>
+        <button onclick="closeSubscriptionModal()" style="background:none; border:none; font-size:18px; font-weight:800; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      <p class="small" style="margin-bottom:14px;">Select your preferred plan to renew or upgrade your shop access:</p>
+
+      <div onclick="selectPlan('Monthly', 300)" id="plan-300" style="background:#f0fdf4; border:2px solid #10b981; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div>
+          <b style="font-size:14px; color:#0f172a;">Monthly Pass</b><br>
+          <span class="small" style="color:#64748b;">Standard access per month</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:15px; color:#10b981;">Ksh 300</b><br>
+          <span class="small" style="color:#64748b;">/ month</span>
+        </div>
+      </div>
+
+      <div onclick="selectPlan('Yearly', 2500)" id="plan-2500" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; position:relative;">
+        <span style="position:absolute; top:-10px; right:12px; background:#10b981; color:#fff; font-size:9px; font-weight:800; padding:2px 8px; border-radius:10px;">BEST VALUE</span>
+        <div>
+          <b style="font-size:14px; color:#0f172a;">Yearly Pass</b><br>
+          <span class="small" style="color:#166534;">Save Ksh 1,100 / year</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:15px; color:#10b981;">Ksh 2,500</b><br>
+          <span class="small" style="color:#166534;">/ year</span>
+        </div>
+      </div>
+
+      <div onclick="selectPlan('Lifetime', 5000)" id="plan-5000" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:16px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div>
+          <b style="font-size:14px; color:#0f172a;">Lifetime Pass 👑</b><br>
+          <span class="small" style="color:#64748b;">Pay once, unlimited forever</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:15px; color:#10b981;">Ksh 5,000</b><br>
+          <span class="small" style="color:#64748b;">one-time</span>
+        </div>
+      </div>
+
+      <button class="btn btn-green" id="payBtn" onclick="contactAdminForPayment()" style="padding:14px; font-size:15px; margin-bottom:8px;">
+        📲 Activate Monthly (Ksh 300)
+      </button>
+      <p class="small" style="text-align:center; color:#94a3b8;">Shop ID: <b>${TENANT}</b></p>
+    </div>
+  `;
+  
+  let modalEl = document.getElementById('subscriptionModal');
+  modalEl.innerHTML = modalHtml;
+  modalEl.style.display = 'flex';
 }
 
 function closeSubscriptionModal() {
@@ -296,7 +296,6 @@ function renderBlockedScreen(title, line1, line2) {
       
       <h3 style="font-size:15px; text-align:left; font-weight:800; margin-bottom:10px; color:#0f172a;">Select Subscription Plan:</h3>
 
-      <!-- MONTHLY PLAN -->
       <div onclick="selectPlan('Monthly', 300)" id="plan-300" style="background:#f0fdf4; border:2px solid #10b981; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <div>
           <b style="font-size:15px; color:#0f172a;">Monthly Pass</b><br>
@@ -308,7 +307,6 @@ function renderBlockedScreen(title, line1, line2) {
         </div>
       </div>
 
-      <!-- YEARLY PLAN -->
       <div onclick="selectPlan('Yearly', 2500)" id="plan-2500" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; position:relative;">
         <span style="position:absolute; top:-10px; right:12px; background:#10b981; color:#fff; font-size:9px; font-weight:800; padding:2px 8px; border-radius:10px;">BEST VALUE</span>
         <div>
@@ -321,7 +319,6 @@ function renderBlockedScreen(title, line1, line2) {
         </div>
       </div>
 
-      <!-- LIFETIME PLAN -->
       <div onclick="selectPlan('Lifetime', 5000)" id="plan-5000" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:16px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
         <div>
           <b style="font-size:15px; color:#0f172a;">Lifetime Pass 👑</b><br>
@@ -333,7 +330,6 @@ function renderBlockedScreen(title, line1, line2) {
         </div>
       </div>
 
-      <!-- ACTION BUTTON -->
       <button class="btn btn-green" id="payBtn" onclick="contactAdminForPayment()" style="padding:14px; font-size:15px; margin-bottom:10px;">
         📲 Activate Monthly (Ksh 300)
       </button>
@@ -617,7 +613,6 @@ function markPaid(id){
 function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
 function addStock(id){ let q=prompt('Add how many? (e.g. 10 or 5.5)','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseFloat(q); saveLocal(); renderAll(); }
 
-// Daily WhatsApp Report Function with Payment Breakdown
 function sendDailyWhatsAppReport() {
   let todayStr = new Date().toDateString();
   let todaySales = sales.filter(s => new Date(s.created_at).toDateString() == todayStr);
@@ -710,9 +705,12 @@ function renderAll(){
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
 
- // Calculate Stock Net Worth
- let totalStockWorth = products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
- document.getElementById('stockNetWorth').innerText = 'Ksh ' + Math.floor(totalStockWorth).toLocaleString();
+ // Calculate Total Inventory Buying Cost & Selling Value
+ let totalBuyingCost = products.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * parseFloat(p.stock || 0)), 0);
+ let totalSellingValue = products.reduce((sum, p) => sum + (parseFloat(p.price || 0) * parseFloat(p.stock || 0)), 0);
+
+ document.getElementById('stockCostWorth').innerText = 'Ksh ' + Math.floor(totalBuyingCost).toLocaleString();
+ document.getElementById('stockSellingWorth').innerText = 'Ksh ' + Math.floor(totalSellingValue).toLocaleString();
 
  let now=new Date();
  let yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
@@ -747,7 +745,20 @@ function renderAll(){
      ? `<span class="badge badge-orange">⚠️ Low Stock (${p.stock})</span>` 
      : `<b>Stock: ${p.stock}</b>`;
 
-   return `<div class="row"><div><b>${sanitize(p.name)}</b><br><span class="small">Sell Ksh ${p.price} • Cost Ksh ${p.cost} • Profit Ksh ${p.price-p.cost}</span></div><div style="text-align:right">${stockBadge}<br><div style="display:flex;gap:4px;margin-top:4px"><button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button><button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button></div></div></div>`;
+   return `<div class="row">
+     <div>
+       <b>${sanitize(p.name)}</b><br>
+       <span style="font-size:12px; color:#0f172a; font-weight:700;">Buying: Ksh ${p.cost} | Selling: Ksh ${p.price}</span><br>
+       <span class="small" style="color:#166534; font-weight:700;">Profit per item: Ksh ${p.price - p.cost}</span>
+     </div>
+     <div style="text-align:right">
+       ${stockBadge}<br>
+       <div style="display:flex;gap:4px;margin-top:4px">
+         <button onclick="addStock(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#dcfce7;font-weight:800">+ Stock</button>
+         <button onclick="deleteProduct(${p.id})" style="padding:4px 8px;border-radius:6px;border:none;background:#fee2e2;color:#991b1b;font-weight:800">Delete</button>
+       </div>
+     </div>
+   </div>`;
  }).join(''):'<p class="small">No products. Add your first product above.</p>';
 
  document.getElementById('mkopoList').innerHTML=sales.filter(s=>!s.is_paid).length?sales.filter(s=>!s.is_paid).map(s=>`<div class="row"><div><b>${sanitize(s.customer||'Customer')}</b><br><span class="small">${sanitize(s.product_name)} x${s.qty} • ${new Date(s.created_at).toLocaleDateString()}</span></div><div style="text-align:right"><b>Ksh ${s.total}</b><br><button class="btn btn-green" style="padding:6px 10px;width:auto;margin-top:4px" onclick="markPaid('${s.id}')">Mark Paid</button></div></div>`).join(''):'<p class="small">No active debts 🎉</p>';
