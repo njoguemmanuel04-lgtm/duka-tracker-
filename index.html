@@ -52,6 +52,12 @@ body{background:#f8fafc;padding-bottom:80px}
 <div class="card stat" style="border-left:4px solid #10b981"><h2 id="profitMonth">Ksh 0</h2><p>PROFIT THIS MONTH</p></div>
 </div>
 
+<!-- Extra Stats Row: Stock Net Worth -->
+<div class="grid4">
+<div class="card stat" style="border-left:4px solid #0284c7;"><h2 id="stockNetWorth">Ksh 0</h2><p>Stock Net Worth (Cost)</p></div>
+<div class="card stat" style="opacity:0"></div>
+</div>
+
 <!-- WhatsApp Report Feature -->
 <div class="card" style="background:#f8fafc; border:2px dashed #cbd5e1; text-align:center;">
   <h3 style="font-size:14px; margin-bottom:6px;">📊 Daily Shop Summary</h3>
@@ -181,12 +187,86 @@ let TENANT=params.get('tenant')||localStorage.getItem('duka_tenant')||'mwea-001'
 localStorage.setItem('duka_tenant',TENANT);
 document.getElementById('tenantIdShow').innerText=TENANT;
 
+let selectedPlanName = 'Monthly';
+let selectedPlanPrice = 300;
+
+function selectPlan(name, price) {
+  selectedPlanName = name;
+  selectedPlanPrice = price;
+
+  [300, 2500, 5000].forEach(p => {
+    let el = document.getElementById('plan-' + p);
+    if(el) {
+      el.style.border = (p === price) ? '2px solid #10b981' : '2px solid #e2e8f0';
+      el.style.background = (p === price) ? '#f0fdf4' : '#fff';
+    }
+  });
+
+  document.getElementById('payBtn').innerText = `📲 Activate ${name} (Ksh ${price.toLocaleString()})`;
+}
+
+function contactAdminForPayment() {
+  let msg = `Hello Admin, I want to activate my Duka Tracker shop:\n` +
+            `📍 Shop ID: *${TENANT}*\n` +
+            `💳 Selected Plan: *${selectedPlanName} (Ksh ${selectedPlanPrice.toLocaleString()})*\n\n` +
+            `Please confirm payment and activate my shop access!`;
+  
+  let encodedMsg = encodeURIComponent(msg);
+  window.open(`https://wa.me/?text=${encodedMsg}`, '_blank');
+}
+
 function renderBlockedScreen(title, line1, line2) {
   document.body.innerHTML = `
-    <div style="padding:40px 20px;text-align:center;font-family:system-ui">
-      <h2 style="font-size:22px;color:#ef4444;margin-bottom:8px">${title}</h2>
-      <p style="color:#475569;font-size:14px">${line1}</p>
-      <p style="color:#475569;font-size:14px;margin-top:4px">${line2}</p>
+    <div style="padding:24px 16px; text-align:center; font-family:system-ui; max-width:420px; margin:0 auto;">
+      <div style="font-size:40px; margin-bottom:8px;">🔒</div>
+      <h2 style="font-size:22px; color:#ef4444; margin-bottom:6px; font-weight:800;">${title}</h2>
+      <p style="color:#64748b; font-size:13px; margin-bottom:16px;">${line1}<br>${line2}</p>
+      
+      <h3 style="font-size:15px; text-align:left; font-weight:800; margin-bottom:10px; color:#0f172a;">Select Subscription Plan:</h3>
+
+      <!-- MONTHLY PLAN -->
+      <div onclick="selectPlan('Monthly', 300)" id="plan-300" style="background:#f0fdf4; border:2px solid #10b981; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div>
+          <b style="font-size:15px; color:#0f172a;">Monthly Pass</b><br>
+          <span class="small" style="color:#64748b;">Standard access per month</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:16px; color:#10b981;">Ksh 300</b><br>
+          <span class="small" style="color:#64748b;">/ month</span>
+        </div>
+      </div>
+
+      <!-- YEARLY PLAN -->
+      <div onclick="selectPlan('Yearly', 2500)" id="plan-2500" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:10px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; position:relative;">
+        <span style="position:absolute; top:-10px; right:12px; background:#10b981; color:#fff; font-size:9px; font-weight:800; padding:2px 8px; border-radius:10px;">BEST VALUE</span>
+        <div>
+          <b style="font-size:15px; color:#0f172a;">Yearly Pass</b><br>
+          <span class="small" style="color:#166534;">Save Ksh 1,100 / year</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:16px; color:#10b981;">Ksh 2,500</b><br>
+          <span class="small" style="color:#166534;">/ year</span>
+        </div>
+      </div>
+
+      <!-- LIFETIME PLAN -->
+      <div onclick="selectPlan('Lifetime', 5000)" id="plan-5000" style="background:#fff; border:2px solid #e2e8f0; border-radius:14px; padding:12px; margin-bottom:16px; text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+        <div>
+          <b style="font-size:15px; color:#0f172a;">Lifetime Pass 👑</b><br>
+          <span class="small" style="color:#64748b;">Pay once, unlimited forever</span>
+        </div>
+        <div style="text-align:right;">
+          <b style="font-size:16px; color:#10b981;">Ksh 5,000</b><br>
+          <span class="small" style="color:#64748b;">one-time</span>
+        </div>
+      </div>
+
+      <!-- ACTION BUTTON -->
+      <button class="btn btn-green" id="payBtn" onclick="contactAdminForPayment()" style="padding:14px; font-size:15px; margin-bottom:10px;">
+        📲 Activate Monthly (Ksh 300)
+      </button>
+
+      <p class="small" style="color:#94a3b8; margin-top:8px;">Tenant ID: <b>${TENANT}</b></p>
     </div>`;
 }
 
@@ -515,7 +595,7 @@ async function loadShop(){
    if(data){
      if(data.is_active===false){ 
        localStorage.setItem('duka_blocked_'+TENANT, 'true');
-       renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
+       renderBlockedScreen("⛔ Shop Subscription Needed", "Your shop subscription is inactive or expired.", "Select a plan below to activate:");
        return; 
      } else {
        localStorage.removeItem('duka_blocked_'+TENANT);
@@ -539,7 +619,7 @@ async function loadShop(){
    const GRACE_PERIOD = 7 * 24 * 60 * 60 * 1000;
    
    if(localStorage.getItem('duka_blocked_' + TENANT) === 'true') {
-     renderBlockedScreen("⛔ Shop Blocked", "Contact Admin. Your subscription expired.", "Pay Ksh 300 to reactivate.");
+     renderBlockedScreen("⛔ Shop Subscription Needed", "Your shop subscription is inactive or expired.", "Select a plan below to activate:");
      return;
    } else if (lastCheckTs && (nowTs - parseInt(lastCheckTs) > GRACE_PERIOD)) {
      renderBlockedScreen("⚠️ Connection Required", "Your 7-day offline grace period has expired.", "Please connect to the internet to verify subscription.");
@@ -557,6 +637,10 @@ function renderAll(){
  document.getElementById('profitToday').innerText='Ksh '+Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0)).toLocaleString();
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
+
+ // Calculate Stock Net Worth
+ let totalStockWorth = products.reduce((sum, p) => sum + (p.cost * p.stock), 0);
+ document.getElementById('stockNetWorth').innerText = 'Ksh ' + Math.floor(totalStockWorth).toLocaleString();
 
  let now=new Date();
  let yesterday=new Date(now); yesterday.setDate(now.getDate()-1);
