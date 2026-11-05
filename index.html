@@ -49,7 +49,7 @@ body{background:#f8fafc;padding-bottom:80px}
 
 <div class="grid4">
 <div class="card stat"><h2 id="salesToday">Ksh 0</h2><p>Sales TODAY</p><small id="ordersToday"></small></div>
-<div class="card stat" style="position:relative;">
+<div class="card stat">
   <div style="display:flex; justify-content:space-between; align-items:center;">
     <p>Profit Today</p>
     <button onclick="unlockProfit()" style="background:none; border:none; cursor:pointer; font-size:14px;"><span id="lock-icon-today">🔒</span></button>
@@ -232,10 +232,6 @@ let selectedPlanPrice = 300;
 
 // PIN Security State
 let isUnlocked = false;
-
-function getStoredPin() {
-  return localStorage.getItem('boss_pin_' + TENANT) || '1234';
-}
 
 function setBossPin() {
   const currentPin = localStorage.getItem('boss_pin_' + TENANT);
@@ -780,7 +776,7 @@ function renderAll(){
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
 
- // Profit & Net Worth calculations
+ // Raw Calculations
  let rawProfitToday = Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0));
  let monthStart=new Date(now.getFullYear(), now.getMonth(), 1);
  let monthSales=sales.filter(s=>new Date(s.created_at)>=monthStart);
