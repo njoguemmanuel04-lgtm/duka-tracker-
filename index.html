@@ -1,3 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duka Tracker</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#10b981">
+<script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('/sw.js'); }</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#f8fafc;padding-bottom:80px}
+.header{background:#0f172a;color:#fff;padding:14px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.logo{font-weight:900;font-size:20px}.logo span{color:#10b981}
+.card{background:#fff;border-radius:16px;padding:14px;margin:10px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat h2{font-size:22px}.stat p{font-size:11px;color:#64748b}
+.btn{background:#0f172a;color:#fff;border:none;padding:10px 12px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;width:100%}
+.btn-green{background:#10b981}.btn-red{background:#ef4444}.btn-orange{background:#f97316}.btn-blue{background:#2563eb}
+.input,.select{width:100%;padding:11px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;font-size:14px}
+.tabs{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid #e2e8f0;z-index:20}
+.tabs button{flex:1;padding:12px 4px;border:none;background:#fff;font-weight:800;font-size:11px;cursor:pointer}
+.tabs button.active{color:#10b981;border-top:3px solid #10b981}
+.page{display:none}.page.active{display:block}
+.row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9}
+.badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800}
+.badge-green{background:#dcfce7;color:#166534}.badge-red{background:#fee2e2;color:#991b1b}.badge-orange{background:#ffedd5;color:#9a3412}
+.small{font-size:11px;color:#64748b}
+</style>
+</head>
+<body>
+<div class="header">
+<div><div class="logo">Duka<span>Tracker</span></div><div id="shopName" style="font-size:11px;opacity:.8">Loading...</div></div>
+<div style="text-align:right;font-size:11px"><div id="syncStatus">🟢 Online</div><div id="pendingCount"></div><div id="tenantIdShow"></div></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-home" class="page active">
+
+<!-- Permanent Subscription Upgrade Banner -->
+<div class="card" style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color:#fff; display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h3 style="font-size:15px; margin-bottom:2px; color:#34d399;">🌟 Upgrade Subscription</h3>
+    <p style="font-size:11px; opacity:0.8;">Monthly, Yearly & Lifetime Passes</p>
+  </div>
+  <button class="btn btn-green" onclick="openSubscriptionModal()" style="width:auto; padding:8px 14px; font-size:12px;">View Plans</button>
+</div>
+
+<div class="grid4">
+<div class="card stat"><h2 id="salesToday">Ksh 0</h2><p>Sales TODAY</p><small id="ordersToday"></small></div>
+<div class="card stat">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <p>Profit Today</p>
+    <button onclick="unlockProfit()" style="background:none; border:none; cursor:pointer; font-size:14px;"><span id="lock-icon-today">🔒</span></button>
+  </div>
+  <h2 id="profitToday" style="margin-top:2px;">Ksh ****</h2>
+</div>
+<div class="card stat"><h2 id="mkopoTotal">Ksh 0</h2><p>Mkopo Unpaid</p></div>
+<div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
+</div>
+
+<!-- Analytics Cards -->
+<div class="grid4">
+<div class="card stat" style="border-left:4px solid #f59e0b"><h2 id="salesYesterday">Ksh 0</h2><p>YESTERDAY</p><small id="ordersYesterday"></small></div>
+<div class="card stat" style="border-left:4px solid #2563eb"><h2 id="salesWeek">Ksh 0</h2><p>THIS WEEK</p><small id="ordersWeek"></small></div>
+<div class="card stat" style="border-left:4px solid #9333ea"><h2 id="salesMonth">Ksh 0</h2><p>THIS MONTH</p><small id="ordersMonth"></small></div>
+<div class="card stat" style="border-left:4px solid #10b981">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <p>PROFIT THIS MONTH</p>
+    <button onclick="unlockProfit()" style="background:none; border:none; cursor:pointer; font-size:14px;"><span id="lock-icon-month">🔒</span></button>
+  </div>
+  <h2 id="profitMonth" style="margin-top:2px;">Ksh ****</h2>
+</div>
+</div>
+
+<!-- Stock Net Worth Card -->
+<div class="grid4">
+<div class="card stat" style="border-left:4px solid #0284c7;">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <p>Stock Net Worth (Cost)</p>
+    <button onclick="unlockProfit()" style="background:none; border:none; cursor:pointer; font-size:14px;"><span id="lock-icon-worth">🔒</span></button>
+  </div>
+  <h2 id="stockNetWorth" style="margin-top:2px;">Ksh ****</h2>
+</div>
+<div class="card stat" style="opacity:0"></div>
+</div>
+
+<!-- Boss PIN Security Settings Card -->
+<div class="card" style="background:#f8fafc; border:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h3 style="font-size:13px; color:#0f172a;">🔒 Boss Security</h3>
+    <p class="small">Protect and hide profit details from attendants</p>
+  </div>
+  <button class="btn" onclick="setBossPin()" style="width:auto; padding:8px 12px; font-size:11px; background:#0f172a;">Change PIN</button>
+</div>
+
+<!-- WhatsApp Report Feature -->
+<div class="card" style="background:#f8fafc; border:2px dashed #cbd5e1; text-align:center;">
+  <h3 style="font-size:14px; margin-bottom:6px;">📊 Daily Shop Summary</h3>
+  <p class="small" style="margin-bottom:10px;">Send itemized Sales, Cash, M-Pesa, Mkopo & Profit</p>
+  <button class="btn btn-green" onclick="sendDailyWhatsAppReport()">📲 Send Daily Report via WhatsApp</button>
+</div>
+
+<div class="card"><h3>Quick Sell</h3><p class="small">Tap a product to sell fast</p><div id="quickSell" style="margin-top:10px"></div></div>
+<div class="card"><h3>Today's Sales</h3><div id="todayList"></div></div>
+</div>
+
+<!-- SELL -->
+<div id="page-sell" class="page">
+  <div class="card">
+    <h3>🛒 POS Terminal</h3>
+    <p class="small">Add products to cart (Supports decimals like 0.5kg)</p>
+    
+    <div style="display: flex; gap: 8px; margin-top: 10px;">
+      <select id="sellProduct" class="select" style="flex: 2; margin-bottom: 0;"></select>
+      <input id="sellQty" type="number" step="0.5" min="0.1" class="input" value="1" placeholder="Qty" style="flex: 1; margin-bottom: 0;">
+      <button class="btn btn-green" onclick="addToCart()" style="width: auto; padding: 0 16px;">+ Add</button>
+    </div>
+
+    <!-- Active Cart Table -->
+    <div id="cartSection" style="margin-top: 14px; display: none;">
+      <div style="font-weight: 800; font-size: 13px; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">
+        Current Cart
+      </div>
+      <div id="cartItemsList"></div>
+      
+      <div class="row" style="border-top: 2px dashed #cbd5e1; margin-top: 8px; padding-top: 8px; font-weight: 800; font-size: 16px;">
+        <span>Total Payable:</span>
+        <span id="cartTotalText" style="color: #10b981;">Ksh 0</span>
+      </div>
+
+      <!-- Payment Configuration -->
+      <div style="margin-top: 10px;">
+        <label class="small" style="font-weight: 700;">Payment Method</label>
+        <select id="sellPayment" class="select" onchange="togglePaymentFields()">
+          <option value="Cash">Cash</option>
+          <option value="M-Pesa">M-Pesa</option>
+          <option value="Debt">Debt (Mkopo)</option>
+        </select>
+      </div>
+
+      <!-- Dynamic Payment Fields -->
+      <div id="cashFields" style="margin-top: 4px;">
+        <input id="cashReceived" type="number" class="input" placeholder="Amount Given by Customer (e.g. 500)" oninput="calculateChange()">
+        <div id="changeDueText" class="small" style="font-weight: 800; color: #2563eb; margin-bottom: 8px;">Change Due: Ksh 0</div>
+      </div>
+
+      <div id="mpesaFields" style="display: none; margin-top: 4px;">
+        <input id="mpesaRef" class="input" placeholder="M-Pesa Reference / Phone (Optional)">
+      </div>
+
+      <div id="debtFields" style="display: none; margin-top: 4px;">
+        <input id="sellCustomer" class="input" placeholder="Customer Full Name (Required)">
+        <input id="sellPhone" class="input" placeholder="Customer Phone Number (Optional)">
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 10px;">
+        <button class="btn btn-red" onclick="clearCart()" style="flex: 1; background: #94a3b8;">Clear Cart</button>
+        <button class="btn btn-green" onclick="checkoutCart()" style="flex: 2; font-size: 15px;">Complete Sale</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Transactions</h3>
+    <div id="allSalesList"></div>
+  </div>
+</div>
+
+<!-- INVENTORY -->
+<div id="page-stock" class="page">
+<div class="card" style="background:#f0fdf4;border:2px solid #bbf7d0"><h3>➕ Add Product</h3>
+<input id="pName" class="input" placeholder="Product name e.g Mkate">
+<input id="pPrice" type="number" class="input" placeholder="Selling Price e.g 60">
+<input id="pCost" type="number" class="input" placeholder="Buying Cost e.g 50">
+<input id="pStock" type="number" step="0.5" class="input" placeholder="Stock e.g 10 or 5.5">
+<button class="btn btn-green" onclick="addProduct()">Add Product</button>
+<button class="btn" style="margin-top:8px;background:#e0f2fe;color:#075985" onclick="addSample()">+ Add Sample Products (for new shop)</button>
+</div>
+<div class="card"><h3>Inventory</h3><div id="stockList"></div></div>
+</div>
+
+<!-- MKOPO -->
+<div id="page-mkopo" class="page">
+<div class="card"><h3>💳 Mkopo - Debts</h3><p class="small">Debt sales appear here automatically. Mark Paid when customer pays.</p><div id="mkopoList" style="margin-top:10px"></div></div>
+</div>
+
+<!-- MATUMIZI -->
+<div id="page-matumizi" class="page">
+<div class="card"><h3>💸 Matumizi - Expenses</h3>
+<input id="mDesc" class="input" placeholder="What did you spend on? e.g Transport">
+<input id="mAmount" type="number" class="input" placeholder="Amount e.g 200">
+<button class="btn btn-orange" onclick="addMatumizi()">Add Matumizi</button></div>
+<div class="card"><h3>Today's Matumizi</h3><div id="matumiziList"></div></div>
+</div>
+
+<!-- Receipt Modal -->
+<div id="receiptModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:100; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:100%; max-width:360px; border-radius:16px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div style="text-align:center; margin-bottom:12px;">
+      <h2 style="font-size:18px; color:#0f172a;">Receipt Completed!</h2>
+      <p class="small" id="receiptDate"></p>
+    </div>
+    <div id="receiptDetails" style="border-top:1px dashed #ccc; border-bottom:1px dashed #ccc; padding:10px 0; margin-bottom:12px; font-size:13px;"></div>
+    <button class="btn btn-green" onclick="closeReceiptModal()">Done / Next Sale</button>
+  </div>
+</div>
+
+<!-- Subscription Modal -->
+<div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:200; align-items:center; justify-content:center; padding:16px;"></div>
+
+<div class="tabs">
+<button id="tab-home" class="active" onclick="showPage('home')">🏠<br>Home</button>
+<button id="tab-sell" onclick="showPage('sell')">🛒<br>Sell</button>
+<button id="tab-stock" onclick="showPage('stock')">📦<br>Stock</button>
+<button id="tab-mkopo" onclick="showPage('mkopo')">💳<br>Mkopo</button>
+<button id="tab-matumizi" onclick="showPage('matumizi')">💸<br>Matumizi</button>
+</div>
+
 <script>
 const SUPABASE_URL="https://mpwyzajhbzaabtdhqumj.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
@@ -194,7 +414,6 @@ let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
 let sales=JSON.parse(localStorage.getItem('duka_sales_'+TENANT)||'[]');
 let matumizi=JSON.parse(localStorage.getItem('duka_matumizi_'+TENANT)||'[]');
 let pending=JSON.parse(localStorage.getItem('duka_pending_'+TENANT)||'[]');
-let pendingProducts=JSON.parse(localStorage.getItem('duka_pending_products_'+TENANT)||'[]');
 let currentCart=[];
 
 function saveLocal(){
@@ -202,10 +421,7 @@ function saveLocal(){
  localStorage.setItem('duka_sales_'+TENANT,JSON.stringify(sales));
  localStorage.setItem('duka_matumizi_'+TENANT,JSON.stringify(matumizi));
  localStorage.setItem('duka_pending_'+TENANT,JSON.stringify(pending));
- localStorage.setItem('duka_pending_products_'+TENANT,JSON.stringify(pendingProducts));
- 
- let totalPending = pending.length + pendingProducts.length;
- document.getElementById('pendingCount').innerText=totalPending?totalPending+' pending • will sync':''; 
+ document.getElementById('pendingCount').innerText=pending.length?pending.length+' pending • will sync':''; 
 }
 
 function showPage(p){
@@ -356,8 +572,6 @@ async function checkoutCart() {
     if (p) {
       p.stock -= item.qty;
       p.stock = Math.round(p.stock * 100) / 100;
-      // Queue stock update for cloud
-      pendingProducts.push({action: 'upsert', product: p});
     }
 
     let saleEntry = {
@@ -425,17 +639,14 @@ function closeReceiptModal() {
 
 function addSample(){
  if(products.length>0) return alert('You already have products');
- let sampleProds = [
+ products=[
   {id:Date.now()+1,name:'Mkate',price:60,cost:50,stock:20},
   {id:Date.now()+2,name:'Milk 500ml',price:70,cost:60,stock:15},
   {id:Date.now()+3,name:'Sugar 1kg',price:150,cost:130,stock:10},
   {id:Date.now()+4,name:'Eggs (1)',price:30,cost:22,stock:30},
   {id:Date.now()+5,name:'Soda 300ml',price:80,cost:65,stock:12},
  ];
- products = sampleProds;
- sampleProds.forEach(p => pendingProducts.push({action: 'upsert', product: p}));
  saveLocal(); renderAll(); alert('Sample products added! Edit or delete them.');
- trySync();
 }
 
 function addProduct(){
@@ -444,14 +655,9 @@ function addProduct(){
  let c=parseFloat(document.getElementById('pCost').value||pr*0.83);
  let s=parseFloat(document.getElementById('pStock').value||0);
  if(!n||!pr) return alert('Fill name and price');
- 
- let newProd = {id:Date.now(), name:n, price:pr, cost:c, stock:s};
- products.push(newProd);
- pendingProducts.push({action: 'upsert', product: newProd});
-
+ products.push({id:Date.now(),name:n,price:pr,cost:c,stock:s});
  ['pName','pPrice','pCost','pStock'].forEach(i=>document.getElementById(i).value='');
  saveLocal(); renderAll(); showPage('stock');
- trySync();
 }
 
 function addMatumizi(){
@@ -476,23 +682,8 @@ function markPaid(id){
  s.is_paid=true; s.payment='Cash'; saveLocal(); renderAll(); alert('Marked as Paid');
 }
 
-function deleteProduct(id){ 
- if(!confirm('Delete product?')) return; 
- products=products.filter(p=>p.id!=id); 
- pendingProducts.push({action: 'delete', id: id});
- saveLocal(); renderAll(); 
- trySync();
-}
-
-function addStock(id){ 
- let q=prompt('Add how many? (e.g. 10 or 5.5)','10'); 
- if(!q) return; 
- let p=products.find(x=>x.id==id); 
- p.stock+=parseFloat(q); 
- pendingProducts.push({action: 'upsert', product: p});
- saveLocal(); renderAll(); 
- trySync();
-}
+function deleteProduct(id){ if(!confirm('Delete product?')) return; products=products.filter(p=>p.id!=id); saveLocal(); renderAll(); }
+function addStock(id){ let q=prompt('Add how many? (e.g. 10 or 5.5)','10'); if(!q) return; let p=products.find(x=>x.id==id); p.stock+=parseFloat(q); saveLocal(); renderAll(); }
 
 function sendDailyWhatsAppReport() {
   let todayStr = new Date().toDateString();
@@ -527,37 +718,12 @@ function sendDailyWhatsAppReport() {
 
 async function trySync(){
  if(!navigator.onLine) return;
- 
- // Sync Pending Sales
- if(pending.length > 0) {
-   let toSend=[...pending];
-   for(let s of toSend){
-     let {error}=await client.from('sales').insert({tenant_id:TENANT,product_name:s.product_name,qty:s.qty,total:s.total,cost:s.cost,payment:s.payment,customer:s.customer||null,is_paid:s.is_paid,created_at:s.created_at});
-     if(!error) pending=pending.filter(x=>x.id!==s.id);
-   }
+ if(pending.length==0) return;
+ let toSend=[...pending];
+ for(let s of toSend){
+   let {error}=await client.from('sales').insert({tenant_id:TENANT,product_name:s.product_name,qty:s.qty,total:s.total,cost:s.cost,payment:s.payment,customer:s.customer||null,is_paid:s.is_paid,created_at:s.created_at});
+   if(!error) pending=pending.filter(x=>x.id!==s.id);
  }
-
- // Sync Pending Products
- if(pendingProducts.length > 0) {
-   let prodToSend = [...pendingProducts];
-   for(let item of prodToSend) {
-     if(item.action === 'upsert') {
-       let {error} = await client.from('products').upsert({
-         id: item.product.id,
-         tenant_id: TENANT,
-         name: item.product.name,
-         price: item.product.price,
-         cost: item.product.cost,
-         stock: item.product.stock
-       });
-       if(!error) pendingProducts = pendingProducts.filter(x => x !== item);
-     } else if (item.action === 'delete') {
-       let {error} = await client.from('products').delete().eq('id', item.id).eq('tenant_id', TENANT);
-       if(!error) pendingProducts = pendingProducts.filter(x => x !== item);
-     }
-   }
- }
-
  saveLocal();
 }
 
@@ -579,19 +745,6 @@ async function loadShop(){
      document.getElementById('shopName').innerText=TENANT;
    }
    
-   // Fetch Cloud Products
-   let {data: productsCloud} = await client.from('products').select('*').eq('tenant_id', TENANT);
-   if(productsCloud && productsCloud.length) {
-     products = productsCloud.map(p => ({
-       id: p.id,
-       name: p.name,
-       price: p.price,
-       cost: p.cost,
-       stock: p.stock
-     }));
-     saveLocal(); renderAll();
-   }
-
    let {data:salesCloud}=await client.from('sales').select('*').eq('tenant_id',TENANT).order('created_at',{ascending:false}).limit(200);
    if(salesCloud && salesCloud.length){
      let ids=new Set(sales.map(s=>s.id));
@@ -709,3 +862,5 @@ loadShop();
 trySync();
 setInterval(trySync,10000);
 </script>
+</body>
+</html>
