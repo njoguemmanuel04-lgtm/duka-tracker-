@@ -81,8 +81,15 @@ function getBossLink(id){ return `https://duka-tracker-seven.vercel.app/boss.htm
 function formatPhone(p){ if(!p) return ''; let n=p.replace(/\D/g,''); if(n.startsWith('0')) n='254'+n.slice(1); if(n.startsWith('254')) return n; return n; }
 
 function waLink(shop, id, phone){
-  let link=getClerkLink(id);
-  let msg=`Karibu ${shop}! 🎉\n\nYour Duka Tracker is ready.\nClick here to open your shop:\n${link}\n\n- Track sales, profit, stock, mkopo & matumizi\n- Works offline\n\nSave this link. Karibu sana!`;
+  let clerkLink = getClerkLink(id);
+  let bossLink = getBossLink(id);
+  let msg = `🇰🇪 *Duka Tracker - Access Details*\n\n` +
+            `Hello Manager, here are your access credentials for *${shop}* (${id.toUpperCase()}):\n\n` +
+            `👑 *Manager / Boss Portal:*\n${bossLink}\n\n` +
+            `📋 *Clerk Delivery Portal:*\n${clerkLink}\n\n` +
+            `🔑 *Shop ID / Pass:* ${id}\n\n` +
+            `Please keep your password secure. Save this link. Karibu sana!`;
+
   if(phone){ return `https://wa.me/${formatPhone(phone)}?text=${encodeURIComponent(msg)}`; }
   return `https://wa.me/?text=${encodeURIComponent(msg)}`;
 }
