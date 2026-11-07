@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duka Tracker - Boss Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui}
+body{background:#f8fafc;padding-bottom:40px}
+.header{background:#0f172a;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10}
+.logo{font-weight:900;font-size:20px}.logo span{color:#10b981}
+.card{background:#fff;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat h2{font-size:24px}.stat p{font-size:11px;color:#64748b}
+.btn{background:#0f172a;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer;font-size:13px;width:100%}
+.btn-green{background:#10b981}
+.badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800}
+.badge-green{background:#dcfce7;color:#166534}
+.small{font-size:11px;color:#64748b}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="logo">Duka<span>Tracker</span> 👑 BOSS</div>
+    <div id="shopName" style="font-size:11px;opacity:.8">Authenticating...</div>
+  </div>
+  <div style="text-align:right;font-size:11px">
+    <div id="syncStatus">🟢 Online</div>
+    <div id="tenantIdShow"></div>
+  </div>
+</div>
+
+<!-- Lock Access Screen -->
+<div id="lockScreen" class="card" style="text-align:center; padding:30px 16px; margin-top:40px;">
+  <div style="font-size:40px; margin-bottom:10px;">🔒</div>
+  <h2>Boss Authentication</h2>
+  <p class="small" style="margin-bottom:16px;">Enter your 4-digit Boss PIN to access financial figures</p>
+  <button class="btn btn-green" onclick="verifyBossPin()">Unlock Boss Portal</button>
+</div>
+
+<!-- Boss Dashboard -->
+<div id="bossDashboard" style="display:none;">
+
+  <div class="grid2">
+    <div class="card stat" style="border-left:4px solid #10b981;">
+      <p>NET PROFIT TODAY</p>
+      <h2 id="profitToday" style="color:#10b981; margin-top:4px;">Ksh 0</h2>
+    </div>
+    <div class="card stat" style="border-left:4px solid #9333ea;">
+      <p>NET PROFIT THIS MONTH</p>
+      <h2 id="profitMonth" style="color:#9333ea; margin-top:4px;">Ksh 0</h2>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card stat" style="border-left:4px solid #0284c7;">
+      <p>STOCK WHOLESALE WORTH</p>
+      <h2 id="stockNetWorth" style="color:#0284c7; margin-top:4px;">Ksh 0</h2>
+    </div>
+    <div class="card stat" style="border-left:4px solid #f59e0b;">
+      <p>UNPAID MKOPO DEBTS</p>
+      <h2 id="mkopoTotal" style="color:#f59e0b; margin-top:4px;">Ksh 0</h2>
+    </div>
+  </div>
+
+  <!-- Security Settings -->
+  <div class="card" style="background:#f8fafc; border:1px solid #cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <h3 style="font-size:14px; color:#0f172a;">🔑 Boss PIN Management</h3>
+      <p class="small">Change your 4-digit master security PIN</p>
+    </div>
+    <button class="btn" onclick="setBossPin()" style="width:auto; padding:8px 12px; font-size:11px;">Change PIN</button>
+  </div>
+
+  <!-- WhatsApp Daily Summary -->
+  <div class="card" style="background:#f0fdf4; border:1px solid #bbf7d0; text-align:center;">
+    <h3 style="font-size:14px; margin-bottom:4px; color:#166534;">📊 Export Daily Report</h3>
+    <p class="small" style="margin-bottom:12px;">Generate itemized summary via WhatsApp</p>
+    <button class="btn btn-green" onclick="sendDailyWhatsAppReport()">📲 Send Daily Summary</button>
+  </div>
+
+</div>
+
+<script>
+const SUPABASE_URL="https://mpwyzajhbzaabtdhqumj.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
+const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const params=new URLSearchParams(location.search);
+let TENANT=params.get('tenant')||localStorage.getItem('duka_tenant')||'mwea-001';
+localStorage.setItem('duka_tenant',TENANT);
+document.getElementById('tenantIdShow').innerText=TENANT;
+
+let products=JSON.parse(localStorage.getItem('duka_products_'+TENANT)||'[]');
+let sales=JSON.parse(localStorage.getItem('duka_sales_'+TENANT)||'[]');
+let matumizi=JSON.parse(localStorage.getItem('duka_matumizi_'+TENANT)||'[]');
+
+function verifyBossPin() {
+  const pinKey = 'boss_pin_' + TENANT;
+  let savedPin = localStorage.getItem(pinKey);
+
+  if (!savedPin) {
+    alert("No Boss PIN set yet. Let's create one now!");
+    setBossPin();
+    savedPin = localStorage.getItem(pinKey);
+    if (!savedPin) return;
+  }
+
+  const enteredPin = prompt("Enter your 4-digit Boss PIN:");
+  if (enteredPin === savedPin) {
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('bossDashboard').style.display = 'block';
+    renderBossData();
+  } else if (enteredPin !== null) {
+    alert("Incorrect PIN!");
+  }
+}
+
+function setBossPin() {
+  const pinKey = 'boss_pin_' + TENANT;
+  const currentPin = localStorage.getItem(pinKey);
+  
+  if (currentPin) {
+    const oldInput = prompt("Enter your CURRENT Boss PIN:");
+    if (oldInput !== currentPin) {
+      alert("Incorrect current PIN!");
+      return;
+    }
+  }
+  
+  const newPin = prompt("Enter your NEW 4-digit Boss PIN:");
+  if (newPin && newPin.trim().length >= 4) {
+    localStorage.setItem(pinKey, newPin.trim());
+    alert("Boss PIN saved successfully!");
+  } else if (newPin !== null) {
+    alert("PIN must be at least 4 digits.");
+  }
+}
+
+async function loadCloudData(){
+ if (navigator.onLine) {
+   let {data: tenants}=await client.from('tenants').select('*').eq('id',TENANT).single();
+   if(tenants) document.getElementById('shopName').innerText = tenants.shop_name + ' • ' + tenants.county;
+
+   let {data: productsCloud} = await client.from('products').select('*').eq('tenant_id', TENANT);
+   if(productsCloud && productsCloud.length) products = productsCloud;
+
+   let {data: salesCloud} = await client.from('sales').select('*').eq('tenant_id', TENANT).order('created_at',{ascending:false}).limit(500);
+   if(salesCloud && salesCloud.length) sales = salesCloud;
+
+   renderBossData();
+ } else {
+   document.getElementById('shopName').innerText = TENANT + ' (Offline)';
+ }
+}
+
+function renderBossData(){
+ let now = new Date();
+ let todayStr = now.toDateString();
+ let todaySales = sales.filter(s => new Date(s.created_at).toDateString() == todayStr);
+ let todayMat = matumizi.filter(m => new Date(m.created_at).toDateString() == todayStr);
+
+ let rawProfitToday = Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0));
+ 
+ let monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+ let monthSales = sales.filter(s => new Date(s.created_at) >= monthStart);
+ let monthMat = matumizi.filter(m => new Date(m.created_at) >= monthStart);
+ let rawProfitMonth = Math.floor(monthSales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-monthMat.reduce((a,b)=>a+b.amount,0));
+ 
+ let rawStockWorth = Math.floor(products.reduce((sum, p) => sum + (parseFloat(p.cost || 0) * parseFloat(p.stock || 0)), 0));
+ let rawMkopo = sales.filter(s => !s.is_paid).reduce((a,b) => a + b.total, 0);
+
+ document.getElementById('profitToday').innerText = 'Ksh ' + rawProfitToday.toLocaleString();
+ document.getElementById('profitMonth').innerText = 'Ksh ' + rawProfitMonth.toLocaleString();
+ document.getElementById('stockNetWorth').innerText = 'Ksh ' + rawStockWorth.toLocaleString();
+ document.getElementById('mkopoTotal').innerText = 'Ksh ' + rawMkopo.toLocaleString();
+}
+
+function sendDailyWhatsAppReport() {
+  let todayStr = new Date().toDateString();
+  let todaySales = sales.filter(s => new Date(s.created_at).toDateString() == todayStr);
+  let todayMat = matumizi.filter(m => new Date(m.created_at).toDateString() == todayStr);
+
+  let totalSalesAmount = todaySales.reduce((a, b) => a + b.total, 0);
+  let totalOrdersCount = todaySales.length;
+  
+  let cashTotal = todaySales.filter(s => s.payment === 'Cash').reduce((a, b) => a + b.total, 0);
+  let mpesaTotal = todaySales.filter(s => s.payment === 'M-Pesa').reduce((a, b) => a + b.total, 0);
+  let mkopoTotal = todaySales.filter(s => s.payment === 'Debt').reduce((a, b) => a + b.total, 0);
+
+  let totalCost = todaySales.reduce((a, b) => a + (b.cost || b.total * 0.83), 0);
+  let totalMatAmount = todayMat.reduce((a, b) => a + b.amount, 0);
+  let netProfit = Math.floor((totalSalesAmount - totalCost) - totalMatAmount);
+
+  let reportText = `📊 *DUKA TRACKER - BOSS REPORT* 📊\n` +
+                   `📅 Date: ${new Date().toLocaleDateString()}\n\n` +
+                   `🛒 *Total Sales:* Ksh ${totalSalesAmount.toLocaleString()} (${totalOrdersCount} orders)\n` +
+                   `💵 *Cash:* Ksh ${cashTotal.toLocaleString()}\n` +
+                   `📱 *M-Pesa:* Ksh ${mpesaTotal.toLocaleString()}\n` +
+                   `📖 *Mkopo:* Ksh ${mkopoTotal.toLocaleString()}\n` +
+                   `💸 *Matumizi:* Ksh ${totalMatAmount.toLocaleString()}\n\n` +
+                   `-----------------------------------\n` +
+                   `📈 *NET PROFIT:* Ksh ${netProfit.toLocaleString()}\n\n` +
+                   `Duka Tracker Boss Portal 🚀`;
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(reportText)}`, '_blank');
+}
+
+window.addEventListener('online', ()=>{ document.getElementById('syncStatus').innerText='🟢 Online'; loadCloudData(); });
+window.addEventListener('offline', ()=>{ document.getElementById('syncStatus').innerText='🔴 Offline Mode'; });
+
+loadCloudData();
+verifyBossPin();
+</script>
+</body>
+</html>
