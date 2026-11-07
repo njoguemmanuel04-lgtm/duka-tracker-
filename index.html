@@ -49,13 +49,7 @@ body{background:#f8fafc;padding-bottom:80px}
 
 <div class="grid4">
 <div class="card stat"><h2 id="salesToday">Ksh 0</h2><p>Sales TODAY</p><small id="ordersToday"></small></div>
-<div class="card stat">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <p>Profit Today</p>
-    <button onclick="unlockProfit()" style="background:none; border:none; cursor:pointer; font-size:14px;"><span id="lock-icon-today">🔒</span></button>
-  </div>
-  <h2 id="profitToday" style="margin-top:2px;">Ksh ****</h2>
-</div>
+<div class="card stat"><h2 id="itemsSoldToday">0</h2><p>Items Sold Today</p></div>
 <div class="card stat"><h2 id="mkopoTotal">Ksh 0</h2><p>Mkopo Unpaid</p></div>
 <div class="card stat"><h2 id="matumiziToday">Ksh 0</h2><p>Matumizi Today</p></div>
 </div>
@@ -838,13 +832,14 @@ function renderAll(){
  let todayStr=now.toDateString();
  let todaySales=sales.filter(s=>new Date(s.created_at).toDateString()==todayStr);
  let todayMat=matumizi.filter(m=>new Date(m.created_at).toDateString()==todayStr);
+ 
  document.getElementById('salesToday').innerText='Ksh '+todaySales.reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('ordersToday').innerText=todaySales.length+' orders today';
+ document.getElementById('itemsSoldToday').innerText=todaySales.reduce((a,b)=>a+b.qty,0).toLocaleString();
  document.getElementById('mkopoTotal').innerText='Ksh '+sales.filter(s=>!s.is_paid).reduce((a,b)=>a+b.total,0).toLocaleString();
  document.getElementById('matumiziToday').innerText='Ksh '+todayMat.reduce((a,b)=>a+b.amount,0).toLocaleString();
 
  // Raw calculations for profits and worth
- let rawProfitToday = Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)-todayMat.reduce((a,b)=>a+b.amount,0));
  let monthStart=new Date(now.getFullYear(), now.getMonth(), 1);
  let monthSales=sales.filter(s=>new Date(s.created_at)>=monthStart);
  let monthMat=matumizi.filter(m=>new Date(m.created_at)>=monthStart);
@@ -853,17 +848,13 @@ function renderAll(){
 
  // Apply PIN Security UI Masking Strictly
  if(isUnlocked) {
-   document.getElementById('profitToday').innerText = 'Ksh ' + rawProfitToday.toLocaleString();
    document.getElementById('profitMonth').innerText = 'Ksh ' + rawProfitMonth.toLocaleString();
    document.getElementById('stockNetWorth').innerText = 'Ksh ' + rawStockWorth.toLocaleString();
-   document.getElementById('lock-icon-today').innerText = '🔓';
    document.getElementById('lock-icon-month').innerText = '🔓';
    document.getElementById('lock-icon-worth').innerText = '🔓';
  } else {
-   document.getElementById('profitToday').innerText = 'Ksh ****';
    document.getElementById('profitMonth').innerText = 'Ksh ****';
    document.getElementById('stockNetWorth').innerText = 'Ksh ****';
-   document.getElementById('lock-icon-today').innerText = '🔒';
    document.getElementById('lock-icon-month').innerText = '🔒';
    document.getElementById('lock-icon-worth').innerText = '🔒';
  }
