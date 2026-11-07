@@ -9,24 +9,32 @@
 .header{background:#0f172a;color:white;padding:16px;display:flex;justify-content:space-between;position:sticky;top:0;z-index:10}
 .logo{font-weight:900;font-size:22px} .logo span{color:#10b981}
 .card{background:white;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-.btn{background:#0f172a;color:white;border:none;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px}
-.btn-accent{background:#10b981} .btn-wa{background:#25D366;color:white} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:none;padding:8px 12px;border-radius:8px;font-weight:800;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:4px}
+.btn-accent{background:#10b981;color:white} 
+.btn-wa{background:#059669;color:white} 
+.btn-boss{background:#065f46;color:white} 
+.btn-clerk{background:#1e293b;color:white}
+.btn-danger{background:#dc2626;color:white}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat h2{font-size:26px} .stat p{font-size:11px;color:#64748b}
-.table{width:100%;font-size:12px;border-collapse:collapse} .table th{text-align:left;padding:8px;background:#f8fafc} .table td{padding:8px;border-bottom:1px solid #f1f5f9}
-.badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800} .badge-green{background:#dcfce7;color:#166534} .badge-red{background:#fee2e2;color:#991b1b}
+.badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800} 
+.badge-green{background:#dcfce7;color:#166534} 
+.badge-red{background:#fee2e2;color:#991b1b}
 .input,.select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:6px}
+.shop-card{background:white;border-radius:16px;padding:14px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #e2e8f0}
 </style>
 </head>
 <body>
 <div class="header"><div class="logo">Duka<span>Tracker</span> EMPIRE</div><div style="font-size:12px">👑 All Dukaz | <span id="conn">LOADING...</span></div></div>
 <div class="card"><h3>🔒 Admin Login</h3><div style="display:flex;gap:8px;margin-top:10px"><input id="adminPass" type="password" class="input" placeholder="admin123" style="margin-bottom:0"><button class="btn btn-accent" onclick="loginAdmin()">Unlock</button></div></div>
+
 <div id="dashboard" style="display:none">
 <div class="grid2">
 <div class="card stat"><h2 id="totalTenants">0</h2><p>Total Dukaz Managed</p><small id="rev" style="color:#10b981;font-weight:800"></small></div>
 <div class="card stat"><h2 id="activeCount">0</h2><p>Active Subscriptions</p></div>
 </div>
 
-<!-- Create New Duka Card with Plan Selector -->
+<!-- Create New Duka Card -->
 <div class="card" style="background:#f0fdf4;border:2px solid #bbf7d0">
 <h3>➕ Create New Duka - Own Link</h3>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
@@ -38,33 +46,21 @@
 
 <label style="font-size:12px;font-weight:700;display:block;margin-top:4px;">Subscription Plan</label>
 <select id="newPlanType" class="select">
-  <option value="Monthly">Monthly Pass (Ksh 300 / month)</option>
-  <option value="Yearly">Yearly Pass (Ksh 2,500 / year)</option>
-  <option value="Lifetime">Lifetime Pass 👑 (Ksh 5,000 one-time)</option>
+  <option value="Monthly">Monthly Pass (Ksh 1,500 / month)</option>
+  <option value="Yearly">Yearly Pass (Ksh 12,000 / year)</option>
+  <option value="Lifetime">Lifetime Pass 👑 (Ksh 35,000 one-time)</option>
 </select>
 
-<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn" onclick="createTenant()">Create + Get Link</button></div>
+<div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn btn-accent" onclick="createTenant()">Create + Get Link</button></div>
 <div id="newLinkResult" style="margin-top:12px;background:white;padding:12px;border-radius:10px;display:none"></div>
 </div>
 
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <h3>All Tenants</h3>
     <input id="search" class="input" placeholder="Search shop..." style="width:200px;margin-bottom:0" oninput="renderTenants()">
   </div>
-  <table class="table" style="margin-top:10px">
-    <thead>
-      <tr>
-        <th>Shop / ID</th>
-        <th>County</th>
-        <th>Status</th>
-        <th>Plan</th>
-        <th>Link</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="tenantBody"></tbody>
-  </table>
+  <div id="tenantListContainer"></div>
 </div>
 </div>
 
@@ -80,13 +76,13 @@ function loginAdmin(){
   loadData(); 
 }
 
-function getShopLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
-
+function getClerkLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
+function getBossLink(id){ return `https://duka-tracker-seven.vercel.app/boss.html?tenant=${id}`; }
 function formatPhone(p){ if(!p) return ''; let n=p.replace(/\D/g,''); if(n.startsWith('0')) n='254'+n.slice(1); if(n.startsWith('254')) return n; return n; }
 
 function waLink(shop, id, phone){
-  let link=getShopLink(id);
-  let msg=`Karibu ${shop}! 🎉\n\nYour Duka Tracker is ready.\nClick here to open your shop:\n${link}\n\n- Track sales, profit, stock, mkopo & matumizi\n- Works offline\n- Monthly, Yearly & Lifetime options available\n\nSave this link. Karibu sana!`;
+  let link=getClerkLink(id);
+  let msg=`Karibu ${shop}! 🎉\n\nYour Duka Tracker is ready.\nClick here to open your shop:\n${link}\n\n- Track sales, profit, stock, mkopo & matumizi\n- Works offline\n\nSave this link. Karibu sana!`;
   if(phone){ return `https://wa.me/${formatPhone(phone)}?text=${encodeURIComponent(msg)}`; }
   return `https://wa.me/?text=${encodeURIComponent(msg)}`;
 }
@@ -105,11 +101,9 @@ async function createTenant(){
  let planType=document.getElementById('newPlanType').value;
  if(!shop||!county||!id) return alert('Fill shop, county, Generate ID');
  
- // 1. Create Tenant
  let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true});
  if(error) return alert('Error: '+error.message);
 
- // 2. Auto-Seed Starter Stock for new Duka
  let baseTime = Date.now();
  let starterProducts = [
    { id: baseTime + 1, tenant_id: id, name: 'Mkate', price: 60, cost: 50, stock: 20 },
@@ -120,10 +114,11 @@ async function createTenant(){
  ];
  await client.from('products').insert(starterProducts);
 
- let link=getShopLink(id);
+ let clerkLink=getClerkLink(id);
+ let bossLink=getBossLink(id);
  let w=waLink(shop,id,phone);
  document.getElementById('newLinkResult').style.display='block';
- document.getElementById('newLinkResult').innerHTML=`✅ Created with 5 Starter Items!<br><b>${shop}</b> (${id}) - [<b>${planType}</b>]<br><a href="${link}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">${link}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${link}');alert('Copied!')">📋 Copy Link</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
+ document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
  loadData();
 }
 
@@ -137,7 +132,6 @@ async function updateTenantPlan(id, newPlan){
 async function loadData(){
  document.getElementById('conn').innerText='LOADING...';
  let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(500);
- 
  allTenants=tenants||[];
  let activeTenants = allTenants.filter(t=>t.is_active!==false);
 
@@ -153,40 +147,46 @@ function renderTenants(){
  let q=document.getElementById('search')?.value.toLowerCase()||'';
  let list=q?allTenants.filter(t=>(t.id+t.shop_name+t.county).toLowerCase().includes(q)):allTenants;
  
- document.getElementById('tenantBody').innerHTML=list.map(t=>{
+ document.getElementById('tenantListContainer').innerHTML=list.map(t=>{
   let isActive=t.is_active!==false;
   let w=waLink(t.shop_name,t.id,t.phone);
   let plan=t.plan_type||'Monthly';
-  let planColor=plan==='Lifetime'?'background:#9333ea;color:#fff':(plan==='Yearly'?'background:#2563eb;color:#fff':'background:#10b981;color:#fff');
+  let clerkLink=getClerkLink(t.id);
+  let bossLink=getBossLink(t.id);
 
-  return `<tr>
-    <td><b>${t.shop_name}</b><br><span class="badge">${t.id}</span><br><small>${t.phone||''}</small></td>
-    <td>${t.county||'-'}</td>
-    <td>${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}</td>
-    <td>
-      <span class="badge" style="${planColor}">${plan}</span><br>
-      <select onchange="updateTenantPlan('${t.id}', this.value)" class="select" style="padding:2px;font-size:10px;margin-top:4px;width:90px">
-        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly</option>
-        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly</option>
-        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime 👑</option>
+  return `<div class="shop-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div>
+        <b style="font-size:15px; color:#0f172a;">${t.shop_name}</b> 
+        <span class="badge" style="background:#f1f5f9; color:#334155; margin-left:6px;">${t.id.toUpperCase()}</span>
+      </div>
+      <div>${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}</div>
+    </div>
+    
+    <div style="font-size:12px; color:#64748b; margin-bottom:10px;">Pass: ${t.id}</div>
+
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+      <button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 Share WhatsApp</button>
+      <button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button>
+      <button class="btn btn-clerk" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">
+      <select onchange="updateTenantPlan('${t.id}', this.value)" class="select" style="width:170px; margin-bottom:0; font-size:12px;">
+        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly (1.5k)</option>
+        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly (12k)</option>
+        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime (35k)</option>
       </select>
-    </td>
-    <td><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:#e6f9ed;color:#0f766e" onclick="navigator.clipboard.writeText('${getShopLink(t.id)}');alert('Copied')">Copy</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">WhatsApp</button></div></td>
-    <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:${isActive?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Deactivate':'Activate'}</button><button class="btn" style="color:#ef4444;background:#fee2e2" onclick="deleteTenant('${t.id}')">Delete</button></td>
-  </tr>`;
- }).join('')||'<tr><td colspan="6">No tenants</td></tr>';
+      <button class="btn ${isActive?'btn-danger':'btn-accent'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Block':'Activate'}</button>
+    </div>
+  </div>`;
+ }).join('')||'<p style="padding:10px; color:#64748b;">No tenants found</p>';
 }
 
 async function toggleActive(id,current){ 
-  if(!confirm((current?'DEACTIVATE - Block shop':'ACTIVATE - Allow shop')+'\n'+id)) return; 
+  if(!confirm((current?'BLOCK shop':'ACTIVATE shop')+'\n'+id)) return; 
   let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); 
   if(error) return alert(error.message); 
-  loadData(); 
-}
-
-async function deleteTenant(id){ 
-  if(!confirm(`DELETE ${id} forever?`)) return; 
-  await client.from('tenants').delete().eq('id',id); 
   loadData(); 
 }
 </script>
