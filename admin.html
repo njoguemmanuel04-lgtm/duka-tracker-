@@ -10,7 +10,7 @@
 .logo{font-weight:900;font-size:22px} .logo span{color:#10b981}
 .card{background:white;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
 .btn{background:#0f172a;color:white;border:none;padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px}
-.btn-accent{background:#10b981} .btn-wa{background:#25D366;color:white} .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-accent{background:#10b981} .btn-wa{background:#25D366;color:white} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .stat h2{font-size:26px} .stat p{font-size:11px;color:#64748b}
 .table{width:100%;font-size:12px;border-collapse:collapse} .table th{text-align:left;padding:8px;background:#f8fafc} .table td{padding:8px;border-bottom:1px solid #f1f5f9}
 .badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800} .badge-green{background:#dcfce7;color:#166534} .badge-red{background:#fee2e2;color:#991b1b}
@@ -21,11 +21,9 @@
 <div class="header"><div class="logo">Duka<span>Tracker</span> EMPIRE</div><div style="font-size:12px">👑 All Dukaz | <span id="conn">LOADING...</span></div></div>
 <div class="card"><h3>🔒 Admin Login</h3><div style="display:flex;gap:8px;margin-top:10px"><input id="adminPass" type="password" class="input" placeholder="admin123" style="margin-bottom:0"><button class="btn btn-accent" onclick="loginAdmin()">Unlock</button></div></div>
 <div id="dashboard" style="display:none">
-<div class="grid4">
-<div class="card stat"><h2 id="totalTenants">0</h2><p>Total Dukaz</p><small id="rev" style="color:#10b981;font-weight:800"></small></div>
-<div class="card stat"><h2 id="totalSalesToday">Ksh 0</h2><p>All Sales TODAY</p><small id="ordersToday"></small></div>
-<div class="card stat"><h2 id="totalProfitToday">Ksh 0</h2><p>Profit Today</p></div>
-<div class="card stat"><h2 id="totalMkopo">Ksh 0</h2><p>Mkopo Unpaid</p></div>
+<div class="grid2">
+<div class="card stat"><h2 id="totalTenants">0</h2><p>Total Dukaz Managed</p><small id="rev" style="color:#10b981;font-weight:800"></small></div>
+<div class="card stat"><h2 id="activeCount">0</h2><p>Active Subscriptions</p></div>
 </div>
 
 <!-- Create New Duka Card with Plan Selector -->
@@ -49,26 +47,55 @@
 <div id="newLinkResult" style="margin-top:12px;background:white;padding:12px;border-radius:10px;display:none"></div>
 </div>
 
-<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>All Tenants</h3><input id="search" class="input" placeholder="Search..." style="width:200px;margin-bottom:0" oninput="renderTenants()"></div>
-<table class="table" style="margin-top:10px"><thead><tr><th>Shop / ID</th><th>County</th><th>Status</th><th>Plan</th><th>Items & Value</th><th>Sales Today</th><th>Link</th><th>Actions</th></tr></thead><tbody id="tenantBody"></tbody></table></div>
-<div class="card"><h3>All Sales Today - Live</h3><table class="table"><thead><tr><th>Time</th><th>Shop</th><th>Product</th><th>Amount</th><th>Payment</th></tr></thead><tbody id="salesBody"></tbody></table></div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h3>All Tenants</h3>
+    <input id="search" class="input" placeholder="Search shop..." style="width:200px;margin-bottom:0" oninput="renderTenants()">
+  </div>
+  <table class="table" style="margin-top:10px">
+    <thead>
+      <tr>
+        <th>Shop / ID</th>
+        <th>County</th>
+        <th>Status</th>
+        <th>Plan</th>
+        <th>Link</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tenantBody"></tbody>
+  </table>
+</div>
 </div>
 
 <script>
 const SUPABASE_URL="https://mpwyzajhbzaabtdhqumj.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
 const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let allTenants=[], allSales=[], allProducts=[];
-function loginAdmin(){ if(document.getElementById('adminPass').value!=='admin123') return alert('Wrong password'); document.getElementById('dashboard').style.display='block'; loadData(); }
+let allTenants=[];
+
+function loginAdmin(){ 
+  if(document.getElementById('adminPass').value!=='admin123') return alert('Wrong password'); 
+  document.getElementById('dashboard').style.display='block'; 
+  loadData(); 
+}
+
 function getShopLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
+
 function formatPhone(p){ if(!p) return ''; let n=p.replace(/\D/g,''); if(n.startsWith('0')) n='254'+n.slice(1); if(n.startsWith('254')) return n; return n; }
+
 function waLink(shop, id, phone){
   let link=getShopLink(id);
   let msg=`Karibu ${shop}! 🎉\n\nYour Duka Tracker is ready.\nClick here to open your shop:\n${link}\n\n- Track sales, profit, stock, mkopo & matumizi\n- Works offline\n- Monthly, Yearly & Lifetime options available\n\nSave this link. Karibu sana!`;
   if(phone){ return `https://wa.me/${formatPhone(phone)}?text=${encodeURIComponent(msg)}`; }
   return `https://wa.me/?text=${encodeURIComponent(msg)}`;
 }
-function generateId(){ let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-')||'duka'; let rand=Math.floor(Math.random()*900+100); document.getElementById('newTenantId').value=`${name}-${rand}`; }
+
+function generateId(){ 
+  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-')||'duka'; 
+  let rand=Math.floor(Math.random()*900+100); 
+  document.getElementById('newTenantId').value=`${name}-${rand}`; 
+}
 
 async function createTenant(){
  let shop=document.getElementById('newShopName').value.trim();
@@ -110,31 +137,23 @@ async function updateTenantPlan(id, newPlan){
 async function loadData(){
  document.getElementById('conn').innerText='LOADING...';
  let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(500);
- let {data: sales}=await client.from('sales').select('*').order('created_at',{ascending:false}).limit(1000);
- let {data: products}=await client.from('products').select('*').limit(2000);
  
- allTenants=tenants||[]; allSales=sales||[]; allProducts=products||[];
- 
- let todayStr=new Date().toDateString();
- let todaySales=allSales.filter(s=>new Date(s.created_at).toDateString()==todayStr);
- document.getElementById('totalTenants').innerText=allTenants.filter(t=>t.is_active!==false).length+' / '+allTenants.length;
- document.getElementById('rev',).innerText=`Active: ${allTenants.filter(t=>t.is_active!==false).length} shops tracked`;
- document.getElementById('totalSalesToday').innerText='Ksh '+todaySales.reduce((a,b)=>a+b.total,0).toLocaleString();
- document.getElementById('ordersToday').innerText=todaySales.length+' orders';
- document.getElementById('totalProfitToday').innerText='Ksh '+Math.floor(todaySales.reduce((a,b)=>a+(b.total-(b.cost||b.total*0.83)),0)).toLocaleString();
+ allTenants=tenants||[];
+ let activeTenants = allTenants.filter(t=>t.is_active!==false);
+
+ document.getElementById('totalTenants').innerText=allTenants.length;
+ document.getElementById('activeCount').innerText=activeTenants.length;
+ document.getElementById('rev').innerText=`${activeTenants.length} active shops`;
+
  renderTenants();
- document.getElementById('salesBody').innerHTML=todaySales.slice(0,100).map(s=>{ let t=allTenants.find(x=>x.id==s.tenant_id); return `<tr><td>${new Date(s.created_at).toLocaleTimeString()}</td><td><span class="badge">${s.tenant_id}</span><br><small>${t?t.shop_name:''}</small></td><td>${s.product_name}</td><td>Ksh ${s.total}</td><td><span class="badge ${s.payment=='M-Pesa'?'badge-green':''}">${s.payment}</span></td></tr>`; }).join('')||'<tr><td colspan="5">No sales today</td></tr>';
  document.getElementById('conn').innerText='ONLINE ✓';
 }
 
 function renderTenants(){
  let q=document.getElementById('search')?.value.toLowerCase()||'';
  let list=q?allTenants.filter(t=>(t.id+t.shop_name+t.county).toLowerCase().includes(q)):allTenants;
+ 
  document.getElementById('tenantBody').innerHTML=list.map(t=>{
-  let tSalesToday=allSales.filter(s=>s.tenant_id==t.id && new Date(s.created_at).toDateString()==new Date().toDateString());
-  let tProds=allProducts.filter(p=>p.tenant_id==t.id);
-  let stockValue=tProds.reduce((sum, p)=>sum+(parseFloat(p.cost||0)*parseFloat(p.stock||0)), 0);
-  
   let isActive=t.is_active!==false;
   let w=waLink(t.shop_name,t.id,t.phone);
   let plan=t.plan_type||'Monthly';
@@ -152,16 +171,24 @@ function renderTenants(){
         <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime 👑</option>
       </select>
     </td>
-    <td><b>${tProds.length} items</b><br><small style="color:#64748b">Worth: Ksh ${Math.floor(stockValue).toLocaleString()}</small></td>
-    <td>Ksh ${tSalesToday.reduce((a,b)=>a+b.total,0).toLocaleString()} (${tSalesToday.length})</td>
     <td><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:#e6f9ed;color:#0f766e" onclick="navigator.clipboard.writeText('${getShopLink(t.id)}');alert('Copied')">Copy</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">WhatsApp</button></div></td>
     <td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="background:${isActive?'#fef3c7;color:#92400e':'#dcfce7;color:#166534'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Deactivate':'Activate'}</button><button class="btn" style="color:#ef4444;background:#fee2e2" onclick="deleteTenant('${t.id}')">Delete</button></td>
   </tr>`;
- }).join('')||'<tr><td colspan="8">No tenants</td></tr>';
+ }).join('')||'<tr><td colspan="6">No tenants</td></tr>';
 }
 
-async function toggleActive(id,current){ if(!confirm((current?'DEACTIVATE - Block shop':'ACTIVATE - Allow shop')+'\n'+id)) return; let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); if(error) return alert(error.message); loadData(); }
-async function deleteTenant(id){ if(!confirm(`DELETE ${id} forever?`)) return; await client.from('tenants').delete().eq('id',id); loadData(); }
+async function toggleActive(id,current){ 
+  if(!confirm((current?'DEACTIVATE - Block shop':'ACTIVATE - Allow shop')+'\n'+id)) return; 
+  let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); 
+  if(error) return alert(error.message); 
+  loadData(); 
+}
+
+async function deleteTenant(id){ 
+  if(!confirm(`DELETE ${id} forever?`)) return; 
+  await client.from('tenants').delete().eq('id',id); 
+  loadData(); 
+}
 </script>
 </body>
 </html>
