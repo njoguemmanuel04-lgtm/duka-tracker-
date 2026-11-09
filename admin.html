@@ -3,13 +3,6 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Duka Tracker - Empire Admin</title>
-<script>
-  if('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(registrations) {
-      for(let registration of registrations) { registration.unregister(); }
-    });
-  }
-</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:system-ui} body{background:#f8fafc;padding-bottom:20px}
@@ -53,9 +46,9 @@
 
 <label style="font-size:12px;font-weight:700;display:block;margin-top:4px;">Subscription Plan</label>
 <select id="newPlanType" class="select">
-  <option value="Monthly">Monthly Pass (Ksh 300 / month)</option>
-  <option value="Yearly">Yearly Pass (Ksh 2,500 / year)</option>
-  <option value="Lifetime">Lifetime Pass 👑 (Ksh 5,000 one-time)</option>
+  <option value="Monthly">Monthly Pass (Ksh 1,500 / month)</option>
+  <option value="Yearly">Yearly Pass (Ksh 12,000 / year)</option>
+  <option value="Lifetime">Lifetime Pass 👑 (Ksh 35,000 one-time)</option>
 </select>
 
 <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn btn-accent" onclick="createTenant()">Create + Get Link</button></div>
@@ -102,7 +95,7 @@ function waLink(shop, id, phone){
 }
 
 function generateId(){ 
-  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g, '-')||'duka'; 
+  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-')||'duka'; 
   let rand=Math.floor(Math.random()*900+100); 
   document.getElementById('newTenantId').value=`${name}-${rand}`; 
 }
@@ -113,17 +106,10 @@ async function createTenant(){
  let phone=document.getElementById('newPhone').value.trim();
  let id=document.getElementById('newTenantId').value.trim();
  let planType=document.getElementById('newPlanType').value;
+ if(!shop||!county||!id) return alert('Fill shop, county, Generate ID');
  
- if(!shop || !county || !phone || !id) {
-   return alert('Please fill in Shop Name, County, Phone, and generate an ID!');
- }
- 
- document.getElementById('conn').innerText='SAVING...';
  let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true});
- if(error) {
-   document.getElementById('conn').innerText='ONLINE ✓';
-   return alert('Supabase Error: '+error.message);
- }
+ if(error) return alert('Error: '+error.message);
 
  let baseTime = Date.now();
  let starterProducts = [
@@ -139,31 +125,20 @@ async function createTenant(){
  let bossLink=getBossLink(id);
  let w=waLink(shop,id,phone);
  document.getElementById('newLinkResult').style.display='block';
- document.getElementById('newLinkResult').innerHTML=`✅ Created & Saved!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
- 
- document.getElementById('newShopName').value = '';
- document.getElementById('newCounty').value = '';
- document.getElementById('newPhone').value = '';
- document.getElementById('newTenantId').value = '';
- document.getElementById('search').value = '';
-
- await loadData();
+ document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
+ loadData();
 }
 
 async function updateTenantPlan(id, newPlan){
- document.getElementById('conn').innerText='SAVING...';
  let {error}=await client.from('tenants').update({plan_type:newPlan}).eq('id',id);
- if(error) {
-   document.getElementById('conn').innerText='ONLINE ✓';
-   return alert('Failed to update plan: '+error.message);
- }
+ if(error) return alert('Failed to update plan: '+error.message);
  alert(`Updated ${id} to ${newPlan} plan!`);
- await loadData();
+ loadData();
 }
 
 async function loadData(){
  document.getElementById('conn').innerText='LOADING...';
- let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(2000);
+ let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(500);
  allTenants=tenants||[];
  let activeTenants = allTenants.filter(t=>t.is_active!==false);
 
@@ -176,7 +151,7 @@ async function loadData(){
 }
 
 function renderTenants(){
- let q=document.getElementById('search')?.value.toLowerCase().trim()||'';
+ let q=document.getElementById('search')?.value.toLowerCase()||'';
  let list=q?allTenants.filter(t=>(t.id+t.shop_name+t.county).toLowerCase().includes(q)):allTenants;
  
  document.getElementById('tenantListContainer').innerHTML=list.map(t=>{
@@ -205,9 +180,9 @@ function renderTenants(){
 
     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">
       <select onchange="updateTenantPlan('${t.id}', this.value)" class="select" style="width:170px; margin-bottom:0; font-size:12px;">
-        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly (300)</option>
-        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly (2.5k)</option>
-        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime (5k)</option>
+        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly (1.5k)</option>
+        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly (12k)</option>
+        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime (35k)</option>
       </select>
       <button class="btn ${isActive?'btn-danger':'btn-accent'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Block':'Activate'}</button>
     </div>
@@ -215,23 +190,11 @@ function renderTenants(){
  }).join('')||'<p style="padding:10px; color:#64748b;">No tenants found</p>';
 }
 
-async function toggleActive(id, current){ 
-  // Instantly flip local state and redraw screen with zero delay
-  let shop = allTenants.find(t => t.id === id);
-  if(shop) shop.is_active = !current;
-  renderTenants(); 
-
-  // Push update to Supabase in the background
-  document.getElementById('conn').innerText='SAVING...';
-  let {error} = await client.from('tenants').update({is_active: !current}).eq('id', id); 
-  
-  if(error) {
-    alert('Error: ' + error.message);
-    if(shop) shop.is_active = current; // Revert state if cloud write failed
-    renderTenants();
-  }
-  
-  document.getElementById('conn').innerText='ONLINE ✓';
+async function toggleActive(id,current){ 
+  if(!confirm((current?'BLOCK shop':'ACTIVATE shop')+'\n'+id)) return; 
+  let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); 
+  if(error) return alert(error.message); 
+  loadData(); 
 }
 </script>
 </body>
