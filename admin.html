@@ -22,13 +22,17 @@
 .btn-boss{background:#065f46;color:white} 
 .btn-clerk{background:#1e293b;color:white}
 .btn-danger{background:#dc2626;color:white}
+.btn-renew{background:#3b82f6;color:white;padding:4px 8px;font-size:11px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat h2{font-size:26px} .stat p{font-size:11px;color:#64748b}
+.stat h2{font-size:24px} .stat p{font-size:11px;color:#64748b}
 .badge{font-size:10px;padding:3px 8px;border-radius:20px;background:#e2e8f0;font-weight:800} 
 .badge-green{background:#dcfce7;color:#166534} 
 .badge-red{background:#fee2e2;color:#991b1b}
+.badge-warn{background:#fef3c7;color:#92400e}
 .input,.select{width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:6px}
 .shop-card{background:white;border-radius:16px;padding:14px;margin:12px;box-shadow:0 2px 10px rgba(0,0,0,.06);border:1px solid #e2e8f0}
+.filter-chip{padding:6px 12px;border-radius:20px;border:1px solid #cbd5e1;background:white;font-size:11px;font-weight:800;cursor:pointer;color:#475569}
+.filter-chip.active{background:#0f172a;color:white;border-color:#0f172a}
 </style>
 </head>
 <body>
@@ -38,7 +42,7 @@
 <div id="dashboard" style="display:none">
 <div class="grid2">
 <div class="card stat"><h2 id="totalTenants">0</h2><p>Total Dukaz Managed</p><small id="rev" style="color:#10b981;font-weight:800"></small></div>
-<div class="card stat"><h2 id="activeCount">0</h2><p>Active Subscriptions</p></div>
+<div class="card stat"><h2 id="activeCount">0</h2><p>Active Subscriptions</p><small id="mrr" style="color:#059669;font-weight:800">Est. MRR: Ksh 0</small></div>
 </div>
 
 <!-- Create New Duka Card -->
@@ -63,10 +67,18 @@
 </div>
 
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
     <h3>All Tenants</h3>
-    <input id="search" class="input" placeholder="Search shop..." style="width:200px;margin-bottom:0" oninput="renderTenants()">
+    <input id="search" class="input" placeholder="Search shop..." style="width:180px;margin-bottom:0" oninput="renderTenants()">
   </div>
+  
+  <!-- Quick Filter Chips -->
+  <div style="display:flex;gap:6px;margin-bottom:12px;">
+    <button class="filter-chip active" id="filter-all" onclick="setFilter('all')">All</button>
+    <button class="filter-chip" id="filter-active" onclick="setFilter('active')">Active</button>
+    <button class="filter-chip" id="filter-blocked" onclick="setFilter('blocked')">Blocked</button>
+  </div>
+
   <div id="tenantListContainer"></div>
 </div>
 </div>
@@ -76,11 +88,21 @@ const SUPABASE_URL="https://mpwyzajhbzaabtdhqumj.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wd3l6YWpoYnphYWJ0ZGhxdW1qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM2Njg3NzIsImV4cCI6MjEwOTI0NDc3Mn0.aBB0Uw5pBJc1H4eCcz3Tgmjx_18YQK3ye_pIiOpBELs";
 const client=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let allTenants=[];
+let currentFilter='all';
 
 function loginAdmin(){ 
   if(document.getElementById('adminPass').value!=='admin123') return alert('Wrong password'); 
   document.getElementById('dashboard').style.display='block'; 
   loadData(); 
+}
+
+function setFilter(type){
+  currentFilter=type;
+  ['all','active','blocked'].forEach(t => {
+    let btn = document.getElementById(`filter-${t}`);
+    if(btn) btn.className = t === type ? 'filter-chip active' : 'filter-chip';
+  });
+  renderTenants();
 }
 
 function getClerkLink(id){ return `https://duka-tracker-seven.vercel.app/?tenant=${id}`; }
@@ -118,8 +140,14 @@ async function createTenant(){
    return alert('Please fill in Shop Name, County, Phone, and generate an ID!');
  }
  
+ // Calculate default expiry (30 days for monthly, 365 for yearly)
+ let now = new Date();
+ let daysToAdd = planType === 'Yearly' ? 365 : (planType === 'Lifetime' ? 3650 : 30);
+ now.setDate(now.getDate() + daysToAdd);
+ let dueDateStr = now.toISOString().split('T')[0];
+
  document.getElementById('conn').innerText='SAVING...';
- let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true});
+ let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true, due_date: dueDateStr});
  if(error) {
    document.getElementById('conn').innerText='ONLINE ✓';
    return alert('Supabase Error: '+error.message);
@@ -157,8 +185,35 @@ async function updateTenantPlan(id, newPlan){
    document.getElementById('conn').innerText='ONLINE ✓';
    return alert('Failed to update plan: '+error.message);
  }
- alert(`Updated ${id} to ${newPlan} plan!`);
  await loadData();
+}
+
+async function renewTenant(id, days, currentDueDateStr){
+  document.getElementById('conn').innerText='SAVING...';
+  let baseDate = currentDueDateStr ? new Date(currentDueDateStr) : new Date();
+  if (isNaN(baseDate.getTime()) || baseDate < new Date()) {
+    baseDate = new Date();
+  }
+  baseDate.setDate(baseDate.getDate() + days);
+  let newDueDate = baseDate.toISOString().split('T')[0];
+
+  let {error} = await client.from('tenants').update({due_date: newDueDate, is_active: true}).eq('id', id);
+  if(error) {
+    document.getElementById('conn').innerText='ONLINE ✓';
+    return alert('Renewal error: ' + error.message);
+  }
+  await loadData();
+}
+
+async function deleteTenant(id, name){
+  if(!confirm(`⚠️ Are you sure you want to permanently delete shop "${name}" (${id})? This action cannot be undone.`)) return;
+  document.getElementById('conn').innerText='SAVING...';
+  let {error} = await client.from('tenants').delete().eq('id', id);
+  if(error){
+    document.getElementById('conn').innerText='ONLINE ✓';
+    return alert('Error deleting shop: ' + error.message);
+  }
+  await loadData();
 }
 
 async function loadData(){
@@ -171,13 +226,44 @@ async function loadData(){
  document.getElementById('activeCount').innerText=activeTenants.length;
  document.getElementById('rev').innerText=`${activeTenants.length} active shops`;
 
+ // Calculate Estimated Monthly Recurring Revenue (MRR)
+ let totalMRR = activeTenants.reduce((sum, t) => {
+   let p = t.plan_type || 'Monthly';
+   if(p === 'Yearly') return sum + Math.round(2500 / 12);
+   if(p === 'Lifetime') return sum + 0;
+   return sum + 300;
+ }, 0);
+ document.getElementById('mrr').innerText = `Est. MRR: Ksh ${totalMRR.toLocaleString()}`;
+
  renderTenants();
  document.getElementById('conn').innerText='ONLINE ✓';
 }
 
+function getExpiryBadge(dueDateStr, planType) {
+  if (planType === 'Lifetime') return '<span class="badge badge-green">LIFETIME</span>';
+  if (!dueDateStr) return '<span class="badge">No Expiry Set</span>';
+  
+  let today = new Date();
+  today.setHours(0,0,0,0);
+  let due = new Date(dueDateStr);
+  let diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return `<span class="badge badge-red">EXPIRED (${Math.abs(diffDays)}d ago)</span>`;
+  if (diffDays === 0) return `<span class="badge badge-warn">DUE TODAY</span>`;
+  if (diffDays <= 5) return `<span class="badge badge-warn">${diffDays} days left</span>`;
+  return `<span class="badge badge-green">${diffDays} days left</span>`;
+}
+
 function renderTenants(){
  let q=document.getElementById('search')?.value.toLowerCase().trim()||'';
- let list=q?allTenants.filter(t=>(t.id+t.shop_name+t.county).toLowerCase().includes(q)):allTenants;
+ 
+ let list = allTenants.filter(t => {
+   let isActive = t.is_active !== false;
+   if(currentFilter === 'active' && !isActive) return false;
+   if(currentFilter === 'blocked' && isActive) return false;
+   if(q && !(t.id + t.shop_name + (t.county||'')).toLowerCase().includes(q)) return false;
+   return true;
+ });
  
  document.getElementById('tenantListContainer').innerHTML=list.map(t=>{
   let isActive=t.is_active!==false;
@@ -185,6 +271,7 @@ function renderTenants(){
   let plan=t.plan_type||'Monthly';
   let clerkLink=getClerkLink(t.id);
   let bossLink=getBossLink(t.id);
+  let expiryBadge = getExpiryBadge(t.due_date, plan);
 
   return `<div class="shop-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -192,15 +279,30 @@ function renderTenants(){
         <b style="font-size:15px; color:#0f172a;">${t.shop_name}</b> 
         <span class="badge" style="background:#f1f5f9; color:#334155; margin-left:6px;">${t.id.toUpperCase()}</span>
       </div>
-      <div>${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}</div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        ${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}
+        <button class="btn" style="background:#ffeeef; color:#dc2626; padding:3px 6px; font-size:10px;" onclick="deleteTenant('${t.id}', '${t.shop_name}')" title="Delete Shop">🗑️</button>
+      </div>
     </div>
     
-    <div style="font-size:12px; color:#64748b; margin-bottom:10px;">Pass: ${t.id}</div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; font-size:12px;">
+      <span style="color:#64748b;">Pass: ${t.id}</span>
+      <div>${expiryBadge}</div>
+    </div>
 
     <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
-      <button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 Share WhatsApp</button>
+      <button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button>
       <button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button>
       <button class="btn btn-clerk" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button>
+    </div>
+
+    <!-- Renewal Controls -->
+    <div style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; padding:8px; border-radius:10px; margin-bottom:10px;">
+      <span style="font-size:11px; font-weight:700; color:#475569;">Renew Sub:</span>
+      <div style="display:flex; gap:4px;">
+        <button class="btn btn-renew" onclick="renewTenant('${t.id}', 30, '${t.due_date||''}')">+30 Days</button>
+        <button class="btn btn-renew" style="background:#4f46e5;" onclick="renewTenant('${t.id}', 365, '${t.due_date||''}')">+1 Year</button>
+      </div>
     </div>
 
     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">
@@ -216,22 +318,16 @@ function renderTenants(){
 }
 
 async function toggleActive(id, current){ 
-  // Instantly flip local state and redraw screen with zero delay
-  let shop = allTenants.find(t => t.id === id);
-  if(shop) shop.is_active = !current;
-  renderTenants(); 
-
-  // Push update to Supabase in the background
   document.getElementById('conn').innerText='SAVING...';
   let {error} = await client.from('tenants').update({is_active: !current}).eq('id', id); 
   
   if(error) {
     alert('Error: ' + error.message);
-    if(shop) shop.is_active = current; // Revert state if cloud write failed
-    renderTenants();
+    document.getElementById('conn').innerText='ONLINE ✓';
+    return;
   }
   
-  document.getElementById('conn').innerText='ONLINE ✓';
+  await loadData();
 }
 </script>
 </body>
