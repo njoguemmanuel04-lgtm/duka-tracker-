@@ -118,8 +118,12 @@ async function createTenant(){
    return alert('Please fill in Shop Name, County, Phone, and generate an ID!');
  }
  
+ document.getElementById('conn').innerText='SAVING...';
  let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true});
- if(error) return alert('Supabase Error: '+error.message);
+ if(error) {
+   document.getElementById('conn').innerText='ONLINE ✓';
+   return alert('Supabase Error: '+error.message);
+ }
 
  let baseTime = Date.now();
  let starterProducts = [
@@ -137,21 +141,24 @@ async function createTenant(){
  document.getElementById('newLinkResult').style.display='block';
  document.getElementById('newLinkResult').innerHTML=`✅ Created & Saved!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
  
- // Clear inputs for next shop creation
  document.getElementById('newShopName').value = '';
  document.getElementById('newCounty').value = '';
  document.getElementById('newPhone').value = '';
  document.getElementById('newTenantId').value = '';
- document.getElementById('search').value = ''; // Reset search filter so new shop is visible immediately
+ document.getElementById('search').value = '';
 
- loadData();
+ await loadData();
 }
 
 async function updateTenantPlan(id, newPlan){
+ document.getElementById('conn').innerText='SAVING...';
  let {error}=await client.from('tenants').update({plan_type:newPlan}).eq('id',id);
- if(error) return alert('Failed to update plan: '+error.message);
+ if(error) {
+   document.getElementById('conn').innerText='ONLINE ✓';
+   return alert('Failed to update plan: '+error.message);
+ }
  alert(`Updated ${id} to ${newPlan} plan!`);
- loadData();
+ await loadData();
 }
 
 async function loadData(){
@@ -208,11 +215,18 @@ function renderTenants(){
  }).join('')||'<p style="padding:10px; color:#64748b;">No tenants found</p>';
 }
 
-async function toggleActive(id,current){ 
+async function toggleActive(id, current){ 
   if(!confirm((current?'BLOCK shop':'ACTIVATE shop')+'\n'+id)) return; 
+  document.getElementById('conn').innerText='SAVING...';
+
   let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); 
-  if(error) return alert(error.message); 
-  loadData(); 
+  if(error) {
+    alert('Error: ' + error.message);
+    document.getElementById('conn').innerText='ONLINE ✓';
+    return;
+  } 
+
+  await loadData();
 }
 </script>
 </body>
