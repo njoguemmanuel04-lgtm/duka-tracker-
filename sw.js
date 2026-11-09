@@ -1,9 +1,10 @@
-const CACHE = 'duka-v2';
+const CACHE = 'duka-v3';
+const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(['/', '/index.html', '/manifest.json']))
+    caches.open(CACHE).then(c => c.addAll(ASSETS))
   );
 });
 
@@ -12,9 +13,7 @@ self.addEventListener('activate', e => {
     caches.keys().then(keys => {
       return Promise.all(
         keys.map(key => {
-          if (key !== CACHE) {
-            return caches.delete(key);
-          }
+          if (key !== CACHE) return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
@@ -22,20 +21,25 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // For page navigation requests, try network first, fallback to cached index.html offline
+  if (e.request.mode === 'navigate') {
+    e.respondWith(
+      fetch(e.request).catch(() => {
+        return caches.match('/index.html');
+      })
+    );
+    return;
+  }
+
+  // For other assets (scripts, styles, icons), try cache first, fallback to network
   e.respondWith(
-    fetch(e.request).then(response => {
-      // Clone and update cache with fresh response if successful
-      if(response && response.status === 200 && response.type === 'basic') {
-        let responseClone = response.clone();
-        caches.open(CACHE).then(cache => {
-          cache.put(e.request, responseClone);
-        });
-      }
-      return response;
-    }).catch(() => {
-      // Fallback to cache when offline
-      return caches.match(e.request).then(cachedResponse => {
-        return cachedResponse || caches.match('/index.html');
+    caches.match(e.request).then(cached => {
+      return cached || fetch(e.request).then(response => {
+        let clone = response.clone();
+        caches.open(CACHE).then(cache => cache.put(e.request, clone));
+        return response;
+      }).catch(() => {
+        // Fallback if both fail
       });
     })
   );
