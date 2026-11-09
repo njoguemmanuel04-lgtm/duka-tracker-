@@ -217,16 +217,22 @@ function renderTenants(){
 
 async function toggleActive(id, current){ 
   if(!confirm((current?'BLOCK shop':'ACTIVATE shop')+'\n'+id)) return; 
-  document.getElementById('conn').innerText='SAVING...';
+  
+  // Instantly update UI first for instant response
+  let shop = allTenants.find(t => t.id === id);
+  if(shop) shop.is_active = !current;
+  renderTenants();
 
+  document.getElementById('conn').innerText='SAVING...';
   let {error}=await client.from('tenants').update({is_active:!current}).eq('id',id); 
+  
   if(error) {
     alert('Error: ' + error.message);
-    document.getElementById('conn').innerText='ONLINE ✓';
-    return;
-  } 
-
-  await loadData();
+    if(shop) shop.is_active = current; // Revert if failed
+    renderTenants();
+  }
+  
+  document.getElementById('conn').innerText='ONLINE ✓';
 }
 </script>
 </body>
