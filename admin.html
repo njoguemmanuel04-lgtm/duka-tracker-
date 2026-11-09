@@ -46,9 +46,9 @@
 
 <label style="font-size:12px;font-weight:700;display:block;margin-top:4px;">Subscription Plan</label>
 <select id="newPlanType" class="select">
-  <option value="Monthly">Monthly Pass (Ksh 1,500 / month)</option>
-  <option value="Yearly">Yearly Pass (Ksh 12,000 / year)</option>
-  <option value="Lifetime">Lifetime Pass 👑 (Ksh 35,000 one-time)</option>
+  <option value="Monthly">Monthly Pass (Ksh 300 / month)</option>
+  <option value="Yearly">Yearly Pass (Ksh 2,500 / year)</option>
+  <option value="Lifetime">Lifetime Pass 👑 (Ksh 5,000 one-time)</option>
 </select>
 
 <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-accent" onclick="generateId()">Generate ID</button><button class="btn btn-accent" onclick="createTenant()">Create + Get Link</button></div>
@@ -180,9 +180,9 @@ function renderTenants(){
 
     <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:8px;">
       <select onchange="updateTenantPlan('${t.id}', this.value)" class="select" style="width:170px; margin-bottom:0; font-size:12px;">
-        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly (1.5k)</option>
-        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly (12k)</option>
-        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime (35k)</option>
+        <option value="Monthly" ${plan==='Monthly'?'selected':''}>Monthly (300)</option>
+        <option value="Yearly" ${plan==='Yearly'?'selected':''}>Yearly (2.5k)</option>
+        <option value="Lifetime" ${plan==='Lifetime'?'selected':''}>Lifetime (5k)</option>
       </select>
       <button class="btn ${isActive?'btn-danger':'btn-accent'}" onclick="toggleActive('${t.id}', ${isActive})">${isActive?'Block':'Activate'}</button>
     </div>
