@@ -102,7 +102,7 @@ function waLink(shop, id, phone){
 }
 
 function generateId(){ 
-  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g,'-')||'duka'; 
+  let name=document.getElementById('newShopName').value.trim().toLowerCase().replace(/\s+/g, '-')||'duka'; 
   let rand=Math.floor(Math.random()*900+100); 
   document.getElementById('newTenantId').value=`${name}-${rand}`; 
 }
@@ -113,10 +113,13 @@ async function createTenant(){
  let phone=document.getElementById('newPhone').value.trim();
  let id=document.getElementById('newTenantId').value.trim();
  let planType=document.getElementById('newPlanType').value;
- if(!shop||!county||!id) return alert('Fill shop, county, Generate ID');
+ 
+ if(!shop || !county || !phone || !id) {
+   return alert('Please fill in Shop Name, County, Phone, and generate an ID!');
+ }
  
  let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true});
- if(error) return alert('Error: '+error.message);
+ if(error) return alert('Supabase Error: '+error.message);
 
  let baseTime = Date.now();
  let starterProducts = [
@@ -132,7 +135,15 @@ async function createTenant(){
  let bossLink=getBossLink(id);
  let w=waLink(shop,id,phone);
  document.getElementById('newLinkResult').style.display='block';
- document.getElementById('newLinkResult').innerHTML=`✅ Created!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
+ document.getElementById('newLinkResult').innerHTML=`✅ Created & Saved!<br><b>${shop}</b> (${id})<br><br><a href="${clerkLink}" target="_blank" style="color:#0f766e;font-weight:800;word-break:break-all">Clerk: ${clerkLink}</a><br><a href="${bossLink}" target="_blank" style="color:#047857;font-weight:800;word-break:break-all">Boss: ${bossLink}</a><br><br><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-accent" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button><button class="btn btn-boss" onclick="navigator.clipboard.writeText('${bossLink}');alert('Boss Link Copied!')">👑 Copy Boss</button><button class="btn btn-wa" onclick="window.open('${w}','_blank')">💬 WhatsApp Share</button></div>`;
+ 
+ // Clear inputs for next shop creation
+ document.getElementById('newShopName').value = '';
+ document.getElementById('newCounty').value = '';
+ document.getElementById('newPhone').value = '';
+ document.getElementById('newTenantId').value = '';
+ document.getElementById('search').value = ''; // Reset search filter so new shop is visible immediately
+
  loadData();
 }
 
@@ -145,7 +156,7 @@ async function updateTenantPlan(id, newPlan){
 
 async function loadData(){
  document.getElementById('conn').innerText='LOADING...';
- let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(500);
+ let {data: tenants}=await client.from('tenants').select('*').order('created_at',{ascending:false}).limit(2000);
  allTenants=tenants||[];
  let activeTenants = allTenants.filter(t=>t.is_active!==false);
 
@@ -158,7 +169,7 @@ async function loadData(){
 }
 
 function renderTenants(){
- let q=document.getElementById('search')?.value.toLowerCase()||'';
+ let q=document.getElementById('search')?.value.toLowerCase().trim()||'';
  let list=q?allTenants.filter(t=>(t.id+t.shop_name+t.county).toLowerCase().includes(q)):allTenants;
  
  document.getElementById('tenantListContainer').innerHTML=list.map(t=>{
