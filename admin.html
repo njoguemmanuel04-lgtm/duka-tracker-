@@ -119,7 +119,8 @@ function waLink(shop, id, phone){
             `🔑 *Shop ID / Pass:* ${id}\n\n` +
             `Please keep your password secure. Save this link. Karibu sana!`;
 
-  if(phone){ return `https://wa.me/${formatPhone(phone)}?text=${encodeURIComponent(msg)}`; }
+  let num = formatPhone(phone);
+  if(num){ return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`; }
   return `https://wa.me/?text=${encodeURIComponent(msg)}`;
 }
 
@@ -140,14 +141,13 @@ async function createTenant(){
    return alert('Please fill in Shop Name, County, Phone, and generate an ID!');
  }
  
- // Calculate default expiry (30 days for monthly, 365 for yearly)
  let now = new Date();
  let daysToAdd = planType === 'Yearly' ? 365 : (planType === 'Lifetime' ? 3650 : 30);
  now.setDate(now.getDate() + daysToAdd);
  let dueDateStr = now.toISOString().split('T')[0];
 
  document.getElementById('conn').innerText='SAVING...';
- let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true, due_date: dueDateStr});
+ let {error}=await client.from('tenants').insert({id, shop_name:shop, county, phone, plan_type:planType, is_active:true, due_date:dueDateStr});
  if(error) {
    document.getElementById('conn').innerText='ONLINE ✓';
    return alert('Supabase Error: '+error.message);
@@ -208,7 +208,10 @@ async function renewTenant(id, days, currentDueDateStr){
 async function deleteTenant(id, name){
   if(!confirm(`⚠️ Are you sure you want to permanently delete shop "${name}" (${id})? This action cannot be undone.`)) return;
   document.getElementById('conn').innerText='SAVING...';
+  
+  await client.from('products').delete().eq('tenant_id', id);
   let {error} = await client.from('tenants').delete().eq('id', id);
+  
   if(error){
     document.getElementById('conn').innerText='ONLINE ✓';
     return alert('Error deleting shop: ' + error.message);
@@ -226,7 +229,6 @@ async function loadData(){
  document.getElementById('activeCount').innerText=activeTenants.length;
  document.getElementById('rev').innerText=`${activeTenants.length} active shops`;
 
- // Calculate Estimated Monthly Recurring Revenue (MRR)
  let totalMRR = activeTenants.reduce((sum, t) => {
    let p = t.plan_type || 'Monthly';
    if(p === 'Yearly') return sum + Math.round(2500 / 12);
@@ -281,7 +283,7 @@ function renderTenants(){
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         ${isActive?'<span class="badge badge-green">ACTIVE</span>':'<span class="badge badge-red">BLOCKED</span>'}
-        <button class="btn" style="background:#ffeeef; color:#dc2626; padding:3px 6px; font-size:10px;" onclick="deleteTenant('${t.id}', '${t.shop_name}')" title="Delete Shop">🗑️</button>
+        <button class="btn" style="background:#ffeeef; color:#dc2626; padding:3px 6px; font-size:10px;" onclick="deleteTenant('${t.id}', '${(t.shop_name||'').replace(/'/g, "\\'")}')" title="Delete Shop">🗑️</button>
       </div>
     </div>
     
@@ -296,7 +298,6 @@ function renderTenants(){
       <button class="btn btn-clerk" onclick="navigator.clipboard.writeText('${clerkLink}');alert('Clerk Link Copied!')">📋 Copy Clerk</button>
     </div>
 
-    <!-- Renewal Controls -->
     <div style="display:flex; align-items:center; justify-content:space-between; background:#f8fafc; padding:8px; border-radius:10px; margin-bottom:10px;">
       <span style="font-size:11px; font-weight:700; color:#475569;">Renew Sub:</span>
       <div style="display:flex; gap:4px;">
